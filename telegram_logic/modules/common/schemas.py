@@ -20,7 +20,7 @@ class Fact(BaseModel):
     context: str | None = None
 
 class Relation(BaseModel):
-    target_note_id: str
+    target_note_path: str
     relation_type: str         # "extends" | "contradicts" | "example_of" | ...
     confidence: float
 
