@@ -29,14 +29,27 @@ class FurtherReadingItem(BaseModel):
     kind: str                  # "article" | "book" | "video"
     url: str | None = None
 
-class Chunk(BaseModel):
-    content: str
-    embedding: list[float] | None = None
+# Designer
+class Formatter(BaseModel):
+    title: str
+    tags: list[str]
+    entities: list[Entity]
+    facts: list[Fact]
+    relations: list[Relation]
+    further_reading: list[FurtherReadingItem]
+    created_at: datetime
+    primary_category: str | None = None
+    confidence: float | None = None
+
+class NoteDesigner(BaseModel):
+    formatter: Formatter
+    content:str
+
 
 # Post LLM Data - Summary
 class Note(BaseModel):
     title: str
-    summary: str
+    summary: str # Summary.content
     tags: list[str]
     entities: list[Entity]
     facts: list[Fact]
@@ -48,7 +61,13 @@ class Note(BaseModel):
 
 
 # DB Data
+
+class Chunk(BaseModel):
+    content: str
+    embedding: list[float] | None = None
+
 class DBPayload(BaseModel):
     note_id: str
     chunks: list[Chunk]        # каждый чанк со своим эмбеддингом (п. 2.5)
-    metadata: dict             # зеркало frontmatter для SQL-индекса (п. 2.7)
+    metadata: Formatter        # зеркало frontmatter для SQL-индекса (п. 2.7)
+    md: str
