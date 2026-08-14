@@ -4,12 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 import facts, relations, further_reading, summary
 import designer
-from modules.common.schemas import TranscriptionResult
+from kb_schemas import NoteDesigner, TranscriptionResult
 
 logger = logging.getLogger(__name__)
 
 
-async def prepare_md(user_id: int, data: TranscriptionResult):
+async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
     results: dict = {}
 
     targets = {

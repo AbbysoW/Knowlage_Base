@@ -2,10 +2,7 @@
 from pathlib import Path
 
 
-from telegram_logic.modules.common.schemas import Chunk
-from modules.common.llm_client import send_request_llm
-from modules.common.embedding_client import embedding_model
-
+from kb_schemas import Chunk
 
 def get_sentence_embedding(sentence: str):
     return embedding_model(sentence)

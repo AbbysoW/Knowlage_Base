@@ -3,8 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from kb_schemas import Fact, TranscriptionResult
 from modules.common.llm_client import send_request_llm
-from modules.common.schemas import Fact, TranscriptionResult
 
 
 load_dotenv()

@@ -4,8 +4,8 @@
 import httpx
 
 
+from kb_schemas import DBPayload
 from config import DB_URL
-from modules.common.schemas import DBPayload
 
 
 # OUTPUT

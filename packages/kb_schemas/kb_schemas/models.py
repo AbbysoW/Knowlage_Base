@@ -67,7 +67,6 @@ class Chunk(BaseModel):
     embedding: list[float] | None = None
 
 class DBPayload(BaseModel):
-    note_id: str
-    chunks: list[Chunk]        # каждый чанк со своим эмбеддингом (п. 2.5)
-    metadata: Formatter        # зеркало frontmatter для SQL-индекса (п. 2.7)
+    chunks: list[Chunk]
+    metadata: Formatter
     md: str

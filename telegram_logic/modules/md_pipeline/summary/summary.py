@@ -2,9 +2,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-
+from kb_schemas import TranscriptionResult
 from modules.common.llm_client import send_request_llm
-from modules.common.schemas import TranscriptionResult
 
 load_dotenv()
 

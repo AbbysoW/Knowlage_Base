@@ -3,8 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from kb_schemas import NoteDesigner
 from modules.common.llm_client import send_request_llm
-from modules.common.schemas import NoteDesigner
 
 load_dotenv()
 

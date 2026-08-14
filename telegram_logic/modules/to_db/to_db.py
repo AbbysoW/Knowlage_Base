@@ -5,7 +5,7 @@
 
 from typing import Any, Callable
 
-from modules.common.schemas import NoteDesigner, DBPayload
+from kb_schemas import DBPayload, NoteDesigner
 from .prepare_for_db import prepare_for_db
 from .db_client import post_new_article
 # from .db_client import

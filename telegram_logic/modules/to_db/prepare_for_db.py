@@ -1,6 +1,6 @@
 
 
-from telegram_logic.modules.common.schemas import NoteDesigner, DBPayload
+from kb_schemas import DBPayload, NoteDesigner
 from .split_model import split_to_chuncks
 
 

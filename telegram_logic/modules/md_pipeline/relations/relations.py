@@ -3,9 +3,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from kb_schemas import Relation, TranscriptionResult
 from modules.common.embedding_client import embedding_model
 from modules.common.llm_client import send_request_llm
-from modules.common.schemas import Relation, TranscriptionResult
 from .db_search_client import get_neerest_articles
 
 
@@ -60,7 +60,6 @@ def process(user_id: int, data: TranscriptionResult, results: dict) -> list[Rela
     articles_str = format_db_request(articles)
 
     llm_result = send_request(raw_content, articles_str)
-
     result = llm_result
 
     if result and isinstance(result, list):
