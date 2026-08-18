@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from kb_schemas import DBPayload
-from logic import DBPayload
+from logic import DBLogic
 app = FastAPI()
 
 
@@ -18,7 +18,7 @@ class NewArticle(BaseModel):
 async def post_new_article(article: NewArticle):
     try: 
         try:
-            await DBPayload.write_to_db(article.user_id, article.payload)
+            await DBLogic.write_to_db(article.user_id, article.payload)
             # transaction logic for adding new article
             # if write fails -> raise err
         except Exception:
@@ -34,4 +34,4 @@ class NeerestArticlesQuery(BaseModel):
 
 @app.api_route('/db/neerest_articles', methods=["QUERY"])
 async def get_neerest_articles(query: NeerestArticlesQuery):
-    pass
+    return await DBLogic.read_nearest(query.user_id, query.vector)

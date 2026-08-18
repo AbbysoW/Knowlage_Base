@@ -43,7 +43,7 @@ class Split:
         chunks = [Chunk(
             content=chunk,
             embedding=EmbeddingModel.get_embedding(chunk),
-            path=Path(data.formatter.primary_category / data.formatter.secondary_category)
+            metadata=data.formatter
         ) for chunk in chunks_str]
 
         return chunks

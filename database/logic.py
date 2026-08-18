@@ -8,7 +8,7 @@ import json
 import uuid
 import asyncio
 
-from kb_schemas.models import DBPayload, Step
+from kb_schemas import DBPayload, Step
 from config import settings
 from database.data.files.api import FileStore
 from database.data.metadata.api import SqliteStore
@@ -100,3 +100,7 @@ class DBLogic:
         )
 
         await tx.run()  # бросит TransactionError, если что-то не так, с автоматическим откатом
+
+    @staticmethod
+    async def read_nearest(user_id: int, vector: list[float], limit: int = 5):
+        return await VectorStore.read_nearest(user_id, vector, limit)

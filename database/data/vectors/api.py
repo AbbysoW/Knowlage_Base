@@ -47,7 +47,9 @@ class VectorStore:
                         ids=[article_id],
                         embeddings=chunk.embedding ,
                         documents=chunk.content,
-                        metadatas={"path": chunk.path},
+                        metadatas={
+                            "path": Path(chunk.metadata.primary_category or "Unsorted") / chunk.metadata.file_name,
+                            "title": chunk.metadata.title},
                     )
                 
             return {"status": "created"}
@@ -55,6 +57,26 @@ class VectorStore:
         except Exception as e:
             pass
 
+    # READ
+
+    @classmethod
+    async def read_nearest(cls, user_id: int, vector: list[float], limit: int = 5):
+        try:
+            collection = cls.client.get_or_create_collection(name=user_id)
+
+            results = collection.query(vector, n_results=limit)
+            
+            return {"status": "read", 
+                    "results": [{
+                        'id': id,
+                        'content': content,
+                        'title': metadata.get('title'),
+                        'path': metadata.get('path')
+                    } for id, content, metadata in zip(results['ids'], results['documents'], results['metadatas'])]}
+
+        except Exception as e:
+            pass
+    
 
     # DELETE
     @classmethod

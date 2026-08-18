@@ -218,3 +218,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Database
+database/data/files/*
+!database/data/files/__init__.py
+!database/data/files/logic.py
+!database/data/files/api.py
+
+database/metadata/files/*
+!database/metadata/files/__init__.py
+!database/metadata/files/logic.py
+!database/metadata/files/api.py
+
+database/vectors/files/*
+!database/vectors/files/__init__.py
+!database/vectors/files/logic.py
+!database/vectors/files/api.py
