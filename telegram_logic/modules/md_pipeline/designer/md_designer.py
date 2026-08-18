@@ -1,50 +1,60 @@
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 
-from kb_schemas import NoteDesigner
-from modules.common.llm_client import send_request_llm
+from kb_schemas import NoteDesigner, Fact, FurtherReadingItem, Relation, TranscriptionResult
+from modules.common.llm_client import LLMClient
 
-load_dotenv()
 
-def send_request(summary: str, facts: str, further_reading: str, relations: str) -> NoteDesigner:
-    '''
-    summary - резюме
-    facts - факты
-    further_reading - результаты поиска
-    relations - связи
-    '''
-
-    with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
-        system_prompt = f.read()
-
-    user_content = f"""
+class MdDesignerModel:
+    load_dotenv()
+    
+    user_content = """
         Резюме данной заметки:
-        {summary}
+        %s
 
         Факты из данной заметки:
-        {facts}
+        %s
 
         Результаты поиска похожей информации:
-        {further_reading}
+        %s
 
         Связи с другими заметками:
-        {relations}
+        %s
     """
+    output_format = NoteDesigner
 
-    format = NoteDesigner
+    @classmethod
+    def _send_request(cls, summary: str, facts: str, further_reading: str, relations: str) -> NoteDesigner:
+        '''
+        summary - резюме
+        facts - факты
+        further_reading - результаты поиска
+        relations - связи
+        '''
+        try:
+            with open(Path("telegram_logic/modules/md_pipeline/designer/sys_prompt.txt"), "r") as f:
+                system_prompt = f.read()
+        
+            user_content = cls.user_content % (summary, facts, further_reading, relations)
+        
+            return LLMClient.send_request(
+                system_prompt=system_prompt,
+                user_content=user_content,
+                output_format=cls.output_format
+            )
+        
+        except FileNotFoundError as e:
+            print(f"File not found: {e}")
 
-    return send_request_llm(system_prompt, user_content, format)
+    @classmethod
+    def process(cls, results: dict, raw_data: TranscriptionResult) -> NoteDesigner:
+        summary = results.get('summary')
+        facts: list[Fact] = results.get('facts')
+        further_reading: list[FurtherReadingItem] = results.get('further_reading')
+        relations: list[Relation] = results.get('relations')
 
-def process(results: dict) -> NoteDesigner:
-    summary = results.get('summary')
-    facts = results.get('facts')
-    further_reading = results.get('further_reading')
-    relations = results.get('relations')
+        llm_result = cls._send_request(summary, facts, further_reading, relations)
+        result = llm_result
 
-
-    llm_result = send_request(summary, facts, further_reading, relations)
-    result = llm_result
-
-    return result
+        return result

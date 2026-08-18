@@ -4,63 +4,74 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from kb_schemas import Relation, TranscriptionResult
-from modules.common.embedding_client import embedding_model
-from modules.common.llm_client import send_request_llm
+from modules.common.embedding_client import EmbeddingModel
+from modules.common.llm_client import LLMClient, send_request_llm
 from .db_search_client import get_neerest_articles
 
 
-
-load_dotenv()
-
-
-def send_request_db(user_id: int, raw_content: str):
-    embadding = embedding_model(raw_content)
-
-    json = get_neerest_articles(user_id, embadding)
-    articles = json["articles"]
-
-    return articles
-
-
-def send_request(raw_content: str, articles_str: str) -> list[Relation]:
-    '''
-    raw_content - сырой текст мыслей
-    articles_str - строка с рекомендуемыми статьями
-    '''
-
-    with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
-        system_prompt = f.read()
-
-        user_content = f"""
-            Основной документ:
-            {raw_content}
-            
-            Предположительно похожие статьи:
-            {articles_str}
-        """
-        format = list[Relation]
-
-    return send_request_llm(system_prompt, user_content, format)
+class RelationModel:
+    load_dotenv()
+    
+    user_content = """
+        Основной документ:
+        %s
+        
+        Предположительно похожие статьи:
+        %s
+    """
+    output_format = list[Relation]
 
 
-def format_db_request(articles: list) -> str:
-    formatted_articles = [f'''
-        - **{article['title']}**
-        Path: {article['path']}
-        {article['content']}
-    ''' for article in articles]
+    @staticmethod
+    def _send_request_db(user_id: int, raw_content: str):
+        embadding = EmbeddingModel.get_embedding(raw_content)
 
-    return "\n\n".join(formatted_articles)
+        json = get_neerest_articles(user_id, embadding)
+        articles = json["articles"]
+
+        return articles
+
+    @classmethod
+    def _send_request(cls, raw_content: str, articles_str: str) -> list[Relation]:
+        '''
+        raw_content - сырой текст мыслей
+        articles_str - строка с рекомендуемыми статьями
+        '''
+        try:
+            with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
+                system_prompt = f.read()
+        
+            user_content = cls.user_content % (raw_content, articles_str)
+        
+            return LLMClient.send_request(
+                system_prompt=system_prompt,
+                user_content=user_content,
+                output_format=cls.output_format
+            )
+
+        except FileNotFoundError as e:
+            print(f"File not found: {e}")
 
 
-def process(user_id: int, data: TranscriptionResult, results: dict) -> list[Relation]:
-    raw_content = data.text
+    @staticmethod
+    def _format_db_request(articles: list) -> str:
+        formatted_articles = [f'''
+            - **{article.get('title', 'Unknown')}**
+            Path: {article.get('path', 'Unknown')}
+            {article.get('content', 'No content available')}
+        ''' for article in articles]
 
-    articles = send_request_db(user_id, raw_content)
-    articles_str = format_db_request(articles)
+        return "\n\n".join(formatted_articles)
 
-    llm_result = send_request(raw_content, articles_str)
-    result = llm_result
+    @classmethod
+    def process(cls, user_id: int, data: TranscriptionResult, results: dict) -> list[Relation]:
+        raw_content = data.text
 
-    if result and isinstance(result, list):
-        results['relations'] = result
+        articles = cls._send_request_db(user_id, raw_content)
+        articles_str = cls._format_db_request(articles)
+
+        llm_result: list[Relation] = cls._send_request(raw_content, articles_str)
+        result = llm_result
+
+        if result and isinstance(result, list):
+            results['relations'] = result

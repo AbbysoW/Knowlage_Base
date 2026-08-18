@@ -1,38 +1,49 @@
 
 from pathlib import Path
 
+from kb_schemas import Chunk, NoteDesigner
 
-from kb_schemas import Chunk
+from telegram_logic.modules.common.embedding_client import EmbeddingModel
+from telegram_logic.modules.common.llm_client import LLMClient
 
-def get_sentence_embedding(sentence: str):
-    return embedding_model(sentence)
+class Split:
 
-
-def send_request(raw_content: str) -> list[str]:
+    user_content = '''
+        Основной документ:
+        %s
     '''
-    raw_content - сырой текст мыслей
-    articles_str - строка с рекомендуемыми статьями
-    '''
+    output_format = list[str]
 
-    with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
-        system_prompt = f.read()
+    @classmethod
+    def send_request(cls, raw_content: str) -> list[str]:
+        '''
+        raw_content - сырой текст мыслей
+        articles_str - строка с рекомендуемыми статьями
+        '''
+        try:
+            with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
+                system_prompt = f.read()
 
-        user_content = f"""
-            Основной документ:
-            {raw_content}
-        """
-        format = list[str]
+                user_content = cls.user_content % (raw_content)
 
-    return send_request_llm(system_prompt, user_content, format)
+            return LLMClient.send_request(
+                system_prompt=system_prompt, 
+                user_content=user_content, 
+                format=cls.output_format
+                )
+        
+        except FileNotFoundError as e:
+            print(f"File not found: {e}")
 
+    @classmethod
+    def split_to_chunks(cls, data: NoteDesigner) -> list[Chunk]:
+        raw_content = data.content
 
-def split_to_chuncks(data: str) -> list[Chunk]:
-    raw_content = data.text
+        chunks_str = cls.send_request(raw_content)
+        chunks = [Chunk(
+            content=chunk,
+            embedding=EmbeddingModel.get_embedding(chunk),
+            path=Path(data.formatter.primary_category / data.formatter.secondary_category)
+        ) for chunk in chunks_str]
 
-    chunks_str = send_request(raw_content)
-    chunks = [Chunk(
-        content=chunk,
-        embedding=get_sentence_embedding(chunk)
-    ) for chunk in chunks_str]
-
-    return chunks
+        return chunks

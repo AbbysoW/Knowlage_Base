@@ -3,36 +3,48 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from kb_schemas import TranscriptionResult
-from modules.common.llm_client import send_request_llm
+from modules.common.llm_client import LLMClient
 
-load_dotenv()
-
-def send_request(raw_content: str, source_type: str) -> str:
-    '''
-    raw_content - сырой текст мыслей
-    source_type - тип источника
-    '''
-    with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
-        system_prompt = f.read()
-
-    user_content = f"""
+class SummaryModel:
+    load_dotenv()
+    
+    user_content = """
         Выдели из этого хаоса главное, структурируй и сделай готовую атомарную заметку для базы знаний.
 
         Текст для анализа:
-        {raw_content} 
+        %s
         
         Дополнительная информация:
-        source_type: {source_type}
+        source_type: %s
     """
 
-    return send_request_llm(system_prompt, user_content)
+    @classmethod
+    def _send_request(cls, raw_content: str, source_type: str) -> str:
+        '''
+        raw_content - сырой текст мыслей
+        source_type - тип источника
+        '''
+        try:
+            with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
+                system_prompt = f.read()
+        
+            user_content = cls.user_content % (raw_content, source_type)
+        
+            return LLMClient.send_request(
+                system_prompt=system_prompt, 
+                user_content=user_content
+                )
+        
+        except FileNotFoundError as e:
+            print(f"File not found: {e}")
 
-def process(user_id: int, data: TranscriptionResult, results: dict):
-    raw_content = data.text
-    source_type = data.source_type
+    @classmethod
+    def process(cls, user_id: int, data: TranscriptionResult, results: dict):
+        raw_content = data.text
+        source_type = data.source_type
 
-    llm_result = send_request(raw_content, source_type)
-    result = llm_result
-
-    if result:
-        results['summary'] = result
+        llm_result = cls._send_request(raw_content, source_type)
+        result = llm_result
+    
+        if result:
+            results['summary'] = result

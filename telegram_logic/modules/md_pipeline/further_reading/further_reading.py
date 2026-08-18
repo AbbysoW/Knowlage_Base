@@ -1,36 +1,46 @@
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 
 from kb_schemas import FurtherReadingItem, TranscriptionResult
-from modules.common.llm_client import send_request_llm
+from modules.common.llm_client import LLMClient
 
 
-load_dotenv()
-
-def send_request(raw_content: str) -> list[FurtherReadingItem]:
-    '''
-    raw_content - сырой текст мыслей
-    '''
-
-    with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
-        system_prompt = f.read()
-
-    user_content = f"""
+class FurtherReadingModel:
+    load_dotenv()
+    
+    user_content = """
         Основной документ:
-        {raw_content}
+        %s
     """
+    output_format = list[FurtherReadingItem]
 
-    format = list[FurtherReadingItem]
+    @classmethod
+    def _send_request(cls, raw_content: str) -> list[FurtherReadingItem]:
+        '''
+        raw_content - сырой текст мыслей
+        '''
+        try:
+            with open(Path("telegram_logic/modules/md_pipeline/further_reading/sys_prompt.txt"), "r") as f:
+                system_prompt = f.read()
+        
+            user_content = cls.user_content % raw_content
+        
+            return LLMClient.send_request(
+                system_prompt=system_prompt,
+                user_content=user_content,
+                output_format=cls.output_format
+            )
+        
+        except FileNotFoundError as e:
+            print(f"File not found: {e}")
 
-    return send_request_llm(system_prompt, user_content, format)
+    @classmethod
+    def process(cls, user_id: int, data: TranscriptionResult, results: dict):
+        raw_content = data.text
 
-def process(user_id: int, data: TranscriptionResult, results: dict):
-    raw_content = data.text
+        llm_result = cls._send_request(raw_content)
+        result = llm_result
 
-    llm_result = send_request(raw_content)
-    result = llm_result
-
-    if result:
-        results['search'] = result
+        if result:
+            results['further_reading'] = result

@@ -14,7 +14,7 @@ http_client = httpx.AsyncClient(
     trust_env=False
 )
 
-async def get_neerest_articles(user_id: int, embedding: list):
+async def get_neerest_articles(user_id: int, embedding: list[float]):
 
     try:
         response = await http_client.request(
