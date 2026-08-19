@@ -95,7 +95,7 @@ class DBLogic:
         )
         tx.add_step(
             name="Vectors",
-            do=lambda: VectorStore.create(user_id, payload.chunks),
+            do=lambda: VectorStore.create(user_id, payload.chunks, payload.metadata),
             compensate=lambda: VectorStore.delete_list(user_id, [chunk.path for chunk in payload.chunks]),
         )
 

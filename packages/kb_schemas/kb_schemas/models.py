@@ -81,7 +81,6 @@ class Note(BaseModel):
 
 class Chunk(BaseModel):
     content: str
-    metadata: Formatter
     embedding: list[float] | None = None
 
 class DBPayload(BaseModel):

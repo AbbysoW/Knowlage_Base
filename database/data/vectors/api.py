@@ -6,7 +6,7 @@ from pathlib import Path
 from time import time
 import chromadb
 
-from kb_schemas import Chunk
+from kb_schemas import Chunk, Formatter
 from config import settings
 
 
@@ -24,7 +24,7 @@ class VectorStore:
 
     # CREATE
     @classmethod
-    def create(cls, user_id: int, chunks: list[Chunk]):
+    def create(cls, user_id: int, chunks: list[Chunk], metadata: Formatter = None):
         try:
             collection = cls.client.get_or_create_collection(name=user_id)
 
@@ -48,8 +48,8 @@ class VectorStore:
                         embeddings=chunk.embedding ,
                         documents=chunk.content,
                         metadatas={
-                            "path": Path(chunk.metadata.primary_category or "Unsorted") / chunk.metadata.file_name,
-                            "title": chunk.metadata.title},
+                            "path": Path(metadata.primary_category or "Unsorted") / metadata.file_name,
+                            "title": metadata.title},
                     )
                 
             return {"status": "created"}
