@@ -1,5 +1,6 @@
 
 import os
+import threading
 from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
@@ -13,15 +14,16 @@ class EmbeddingModel:
 
     @classmethod
     def _get_model(cls) -> SentenceTransformer:
-        if cls._model is None:
-            cls._model = SentenceTransformer(settings.embedding_model.name)
-            cls._model.eval()
-        return cls._model
+        with threading.Lock():
+            if cls._model is None:
+                cls._model = SentenceTransformer(settings.embedding_model.name)
+                cls._model.eval()
+            return cls._model
 
     @classmethod
-    def get_embedding(cls, x: str) -> torch.Tensor:
+    def get_embedding(cls, x: str) -> list[float]:
         with torch.no_grad():
-            return torch.tensor(cls._get_model().encode(x), dtype=torch.float32)
+            return cls._get_model().encode(x).tolist()
 
 
 

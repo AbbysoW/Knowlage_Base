@@ -3,6 +3,7 @@
 
 
 
+import asyncio
 from typing import Any, Callable
 
 from kb_schemas import DBPayload, NoteDesigner, TranscriptionResult
@@ -23,8 +24,8 @@ class ToDB:
     async def _prepare_payload(note_designer: NoteDesigner, raw_data: TranscriptionResult) -> DBPayload:
         try:
             return DBPayload(
-                chunks=Split.split_to_chunks(note_designer),
-                meta=note_designer.formatter,
+                chunks=await asyncio.to_thread(Split.split_to_chunks, note_designer),
+                metedata=note_designer.formatter,
                 md=note_designer.content,
                 raw_data=raw_data
             )

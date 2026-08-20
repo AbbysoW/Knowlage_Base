@@ -55,3 +55,9 @@ async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
         return None
 
     return md
+
+
+
+    # 1.6 [LOW] Общий словарь results пишется из разных потоков без синхронизации
+
+    # md_pipeline.py — каждый worker пишет results[key] = value из своего потока executor'а. Присваивание по ключу в CPython обычно атомарно благодаря GIL, но это неявная гарантия, на которую не стоит полагаться в архитектурном коде — лучше собирать результаты через future.result(), а не через shared mutable state.

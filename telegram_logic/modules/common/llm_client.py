@@ -1,4 +1,5 @@
 import os
+import threading
 from typing import Any
 
 from openai import OpenAI, APIConnectionError, APITimeoutError, RateLimitError
@@ -11,12 +12,13 @@ class LLMClient:
 
     @classmethod
     def _get_client(cls) -> OpenAI:
-        if cls._client is None:
-            cls._client = OpenAI(
-                base_url="https://api.deepseek.com",
-                api_key=settings.deepseek_api_key,
-            )
-        return cls._client
+        with threading.Lock():
+            if cls._client is None:
+                cls._client = OpenAI(
+                    base_url="https://api.deepseek.com",
+                    api_key=settings.deepseek_api_key,
+                )
+            return cls._client
 
     @classmethod
     def send_request(cls, system_prompt: str, user_content: str, format: Any | None = None):
