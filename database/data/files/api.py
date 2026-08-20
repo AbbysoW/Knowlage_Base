@@ -4,6 +4,8 @@
 
 
 
+import asyncio
+import textwrap
 from pathlib import Path
 
 from kb_schemas.models import DBPayload
@@ -13,24 +15,41 @@ from config import settings
 class FileStore:
 
     @staticmethod
-    async def create(user_id: int, payload: DBPayload):
-        try:
-            filepath: Path = settings.db.file_store.path / f"{user_id}" / payload.metadata.primary_category or "Unsorted" / payload.metadata.file_name
-            filepath.parent.mkdir(parents=True, exist_ok=True)
-            filepath.touch(exist_ok=False)
+    def _build_path(user_id: int, primary_category: str | None, file_name: str) -> Path:
+        return (
+            settings.db.file_store.path
+            / f"{user_id}"
+            / (primary_category or "Unsorted")
+            / file_name
+        )
 
-            filepath.write_text(f'''
-                ---
-                title: {payload.metadata.title}
-                created: {payload.metadata.created_at}
-                source_type: video
-                tags: {payload.metadata.tags_to_str()}
-                entities: {payload.metadata.entities_to_str()}
-                related_articles: {payload.metadata.relations_to_str()}
-                ---
-                #{payload.metadata.title}
-                {payload.md}
-            ''')
+
+    # CREATE
+    @classmethod
+    def _create_sync(cls, user_id: int, payload: DBPayload):
+        filepath: Path = cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        content = textwrap.dedent(f'''\
+            ---
+            title: {payload.metadata.title}
+            created: {payload.metadata.created_at}
+            source_type: video
+            tags: {payload.metadata.tags_to_str()}
+            entities: {payload.metadata.entities_to_str()}
+            related_articles: {payload.metadata.relations_to_str()}
+            ---
+            # {payload.metadata.title}
+            {payload.md}
+        ''')
+
+        with filepath.open("x", encoding="utf-8") as f:
+            f.write(content)
+
+    @classmethod
+    async def create(cls, user_id: int, payload: DBPayload):
+        try:
+            await asyncio.to_thread(cls._create_sync, user_id, payload)
 
         except FileExistsError as e:
             pass
@@ -38,25 +57,25 @@ class FileStore:
         except FileNotFoundError as e:
             pass
 
-    @staticmethod
-    async def read(user_id: int, file_name: str, primary_category: str | None):
+    @classmethod
+    async def read(cls, user_id: int, file_name: str, primary_category: str | None):
         pass
 
-    @staticmethod
-    async def update(user_id: int, file_name: str, primary_category: str | None):
+    @classmethod
+    async def update(cls, user_id: int, file_name: str, primary_category: str | None):
         pass
 
-    @staticmethod
-    async def delete(user_id: int, file_name: str, primary_category: str | None):
+
+    # DELETE
+    @classmethod
+    def _delete_sync(cls, user_id: int, file_name: str, primary_category: str | None):
+        filepath = cls._build_path(user_id, primary_category, file_name)
+        filepath.unlink(missing_ok=True)
+
+    @classmethod
+    async def delete(cls, user_id: int, file_name: str, primary_category: str | None):
         try:
-            filepath: Path = settings.db.file_store.path / f"{user_id}" / primary_category or "Unsorted" / file_name
-            filepath.parent.unlink(missing_ok=True)
-            
-        # except FileExistsError as e:
-        #     pass
-
-        # except FileNotFoundError as e:
-        #     pass
-
+            await asyncio.to_thread(cls._delete_sync, user_id, file_name, primary_category)
         except Exception as e:
-            pass
+            # logger.error(f"Delete failed: user={user_id}, file={file_name}: {e}")
+            raise

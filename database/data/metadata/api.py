@@ -4,6 +4,7 @@
 
 
 
+import asyncio
 import sqlite3
 import json
 from datetime import date, datetime
@@ -54,13 +55,13 @@ class SqliteStore:
 
     # UTILS
     @classmethod
-    def _serialize_list(value: Optional[List[Any]]) -> Optional[str]:
+    def _serialize_list(cls, value: Optional[List[Any]]) -> Optional[str]:
         if value is None:
             return None
         return json.dumps(value, ensure_ascii=False)
     
     @classmethod
-    def _deserialize_list(value: Optional[str]) -> List[Any]:
+    def _deserialize_list(cls, value: Optional[str]) -> List[Any]:
         if not value:
             return []
         return json.loads(value)
@@ -86,7 +87,7 @@ class SqliteStore:
     
     # CREATE
     @classmethod
-    async def create(cls, user_id: int, payload: DBPayload):
+    def _create_sync(cls, user_id: int, payload: DBPayload):
         metadata = payload.metadata
         raw_data = payload.raw_data
 
@@ -109,16 +110,29 @@ class SqliteStore:
             )
             new_id = cursor.lastrowid
         return cls.read_metadata_by_id(new_id)
+    
+    @classmethod
+    async def create(cls, user_id: int, payload: DBPayload):
+        try:
+            await asyncio.to_thread(cls._create_sync, user_id, payload)
+
+        except Exception as e:
+            pass
+        
 
     # READ
     @classmethod
-    def read_metadata_by_id(cls, record_id: int) -> Optional[Dict[str, Any]]:
-        """Возвращает одну запись по id или None, если не найдена."""
+    def _read_metadata_by_id(cls, record_id: int):
         with cls._get_connection() as conn:
             row = conn.execute(
                 "SELECT * FROM MetaData WHERE id = ?", (record_id,)
             ).fetchone()
         return cls._row_to_dict(row) if row else None
+
+    @classmethod
+    async def read_metadata_by_id(cls, record_id: int) -> Optional[Dict[str, Any]]:
+        """Возвращает одну запись по id или None, если не найдена."""
+        return await asyncio.to_thread(cls._read_metadata_by_id, record_id)
 
 
 
@@ -130,8 +144,10 @@ class SqliteStore:
     async def update(cls, user_id: int, file_name: str, primary_category: str | None):
         pass
 
+
+    # DELETE
     @classmethod
-    async def delete(cls, user_id: int, title: str, primary_category: str | None):
+    def _delete(cls, user_id: int, title: str, primary_category: str | None):
         with cls._get_connection() as conn:
             cursor = conn.execute(
                 """
@@ -143,6 +159,10 @@ class SqliteStore:
                     primary_category or 'Unsorted'
                 )
             )
+
+    @classmethod
+    async def delete(cls, user_id: int, title: str, primary_category: str | None):
+        await asyncio.to_thread(cls._delete, user_id, title, primary_category)
 
 
 SqliteStore.init_db()
