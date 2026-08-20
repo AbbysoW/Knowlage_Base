@@ -1,73 +1,68 @@
-from datetime import datetime
+import asyncio
 import os
-import re
+from datetime import datetime
 
-import telebot
-from telebot import types
+from aiogram import Bot, Dispatcher, F
+from aiogram.filters import CommandStart
+from aiogram.types import Message
 from dotenv import load_dotenv
 
 from telegram_logic.router import new_data
+from config import settings
 
 
 load_dotenv()
 
-token  =  os.getenv("TELEGRAM_API_TOKEN")
-bot = telebot.TeleBot(token)
+token = settings.telegram_api_token
+bot = Bot(token=token)
+dp = Dispatcher()
 
 
-@bot.message_handler(content_types=['text'], func=lambda message: not message.text.startswith('/'))
-def catch_message(message):
+@dp.message(F.text, ~F.text.startswith('/'))
+async def catch_message(message: Message):
     status = new_data(message.from_user.id, message.text, 'text', datetime.now().isoformat())
     if status:
-        bot.reply_to(message, "Text received!")
+        await message.reply("Text received!")
     else:
-        bot.reply_to(message, "Failed to receive the text.\nTry again later!")
+        await message.reply("Failed to receive the text.\nTry again later!")
 
 
-# @bot.message_handler(content_types=['voice', 'audio'])
-# def catch_audio(message):
+# @dp.message(F.voice | F.audio)
+# async def catch_audio(message: Message):
 #     # Get file ID for voice or standard audio
 #     file_id = message.voice.file_id if message.voice else message.audio.file_id
-    
 #     # Retrieve file info from Telegram servers
-#     file_info = bot.get_file(file_id)
-        
-#     bot.reply_to(message, "Audio caught successfully!")
+#     file_info = await bot.get_file(file_id)
+#     await message.reply("Audio caught successfully!")
 
 
-# @bot.message_handler(content_types=['photo'])
-# def catch_image(message):
+# @dp.message(F.photo)
+# async def catch_image(message: Message):
 #     # Get file ID for the image
 #     file_id = message.photo[-1].file_id  # Get the largest image
-    
 #     # Retrieve file info from Telegram servers
-#     file_info = bot.get_file(file_id)
-        
-#     bot.reply_to(message, "Photo caught successfully!")
+#     file_info = await bot.get_file(file_id)
+#     await message.reply("Photo caught successfully!")
 
 
-# @bot.message_handler(content_types=['video'])
-# def catch_video(message):
+# @dp.message(F.video)
+# async def catch_video(message: Message):
 #     # Get file ID for the video
 #     file_id = message.video.file_id
-
 #     # Retrieve file info from Telegram servers
-#     file_info = bot.get_file(file_id)
-        
-#     bot.reply_to(message, "Video caught successfully!")
-
+#     file_info = await bot.get_file(file_id)
+#     await message.reply("Video caught successfully!")
 
 
 # Start
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message, "Welcome to the bot!")
-
-    
+@dp.message(CommandStart())
+async def start(message: Message):
+    await message.reply("Welcome to the bot!")
 
 
+async def run_bot():
+    await dp.start_polling(bot)
 
-def run_bot():
-    bot.polling(none_stop=True)
 
-run_bot()
+if __name__ == "__main__":
+    asyncio.run(run_bot())
