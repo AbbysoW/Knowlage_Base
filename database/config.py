@@ -15,7 +15,7 @@ class FileStore(BaseModel):
 
 class MetadataStore(BaseModel):
     name: str = 'metadata_store'
-    path: Path = Path("/data/metadata/metadata.sqlite3")
+    path: Path = Path("/data/metadata")
 
 class VectorStore(BaseModel):
     name: str = 'vector_store'
