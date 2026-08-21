@@ -10,20 +10,18 @@ logger = logging.getLogger(__name__)
 
 
 async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
-    results: dict = {}
-
     targets = {
-        "facts": facts.process,
-        "relations": relations.process,
-        "further_reading": further_reading.process,
-        "summary": summary.process,
+        "facts": facts.FactsModel.process,
+        "relations": relations.RelationModel.process,
+        "further_reading": further_reading.FurtherReadingModel.process,
+        "summary": summary.SummaryModel.process,
     }
 
     loop = asyncio.get_event_loop()
 
     with ThreadPoolExecutor(max_workers=len(targets)) as pool:
         futures = {
-            name: loop.run_in_executor(pool, func, user_id, data, results)
+            name: loop.run_in_executor(pool, func, user_id, data)
             for name, func in targets.items()
         }
 
@@ -34,7 +32,7 @@ async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
             except Exception as e:
                 logger.exception("Поток '%s' упал", name)
                 errors[name] = e
-                
+    results: dict = {name: fut.result() for name, fut in futures.items() if not fut.exception()}
 
     if errors:
         name, exc = next(iter(errors.items()))
@@ -45,13 +43,13 @@ async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
         return None
 
     try:
-        md = await loop.run_in_executor(None, designer.process, results)
+        md = await loop.run_in_executor(None, designer.MdDesignerModel.process, results)
     except Exception:
-        logger.exception("designer.process упал с ошибкой")
+        logger.exception("designer.MdDesignerModel.process упал с ошибкой")
         raise
 
     if not md:
-        logger.error("designer.process вернул пустой результат")
+        logger.error("designer.MdDesignerModel.process вернул пустой результат")
         return None
 
     return md

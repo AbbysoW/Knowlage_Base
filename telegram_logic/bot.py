@@ -7,7 +7,9 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
 
-from telegram_logic.router import new_data
+from router import new_data
+from modules.md_pipeline.relations.db_search_client import close_http_client as close_search_client
+from modules.to_db.db_client import close_http_client as close_db_client
 from config import settings
 
 
@@ -61,7 +63,12 @@ async def start(message: Message):
 
 
 async def run_bot():
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await close_search_client()
+        await close_db_client()
+        await bot.session.close()
 
 
 if __name__ == "__main__":

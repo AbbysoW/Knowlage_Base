@@ -1,11 +1,11 @@
-import os
+import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from kb_schemas import Relation, TranscriptionResult
 from modules.common.embedding_client import EmbeddingModel
-from modules.common.llm_client import LLMClient, send_request_llm
+from modules.common.llm_client import LLMClient
 from .db_search_client import get_neerest_articles
 
 
@@ -23,27 +23,27 @@ class RelationModel:
 
 
     @staticmethod
-    def _send_request_db(user_id: int, raw_content: str):
-        embadding = EmbeddingModel.get_embedding(raw_content)
+    async def _send_request_db(user_id: int, raw_content: str):
+        embadding = await asyncio.to_thread(EmbeddingModel.get_embedding, raw_content)
 
-        json = get_neerest_articles(user_id, embadding)
-        articles = json["articles"]
+        response = await get_neerest_articles(user_id, embadding)
+        articles = response.get("articles", []) if response else []
 
         return articles
 
     @classmethod
-    def _send_request(cls, raw_content: str, articles_str: str) -> list[Relation]:
+    async def _send_request(cls, raw_content: str, articles_str: str) -> list[Relation]:
         '''
         raw_content - сырой текст мыслей
         articles_str - строка с рекомендуемыми статьями
         '''
         try:
-            with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
+            with open(Path(__file__).parent / "sys_prompt.txt", "r") as f:
                 system_prompt = f.read()
         
             user_content = cls.user_content % (raw_content, articles_str)
         
-            return LLMClient.send_request(
+            return await asyncio.to_thread(LLMClient.send_request,
                 system_prompt=system_prompt,
                 user_content=user_content,
                 output_format=cls.output_format
@@ -64,14 +64,14 @@ class RelationModel:
         return "\n\n".join(formatted_articles)
 
     @classmethod
-    def process(cls, user_id: int, data: TranscriptionResult, results: dict) -> list[Relation]:
+    async def process(cls, user_id: int, data: TranscriptionResult) -> list[Relation]:
         raw_content = data.text
 
-        articles = cls._send_request_db(user_id, raw_content)
+        articles = await cls._send_request_db(user_id, raw_content)
         articles_str = cls._format_db_request(articles)
 
-        llm_result: list[Relation] = cls._send_request(raw_content, articles_str)
+        llm_result: list[Relation] = await cls._send_request(raw_content, articles_str)
         result = llm_result
 
         if result and isinstance(result, list):
-            results['relations'] = result
+            return result

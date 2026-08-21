@@ -1,1 +1,1 @@
-from .md_designer import process
+from .md_designer import MdDesignerModel

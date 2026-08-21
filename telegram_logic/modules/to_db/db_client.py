@@ -5,7 +5,7 @@ import httpx
 
 
 from kb_schemas import DBPayload
-from config import DB_URL
+from config import settings
 
 
 # OUTPUT
@@ -20,10 +20,10 @@ async def post_new_article(user_id: int, payload: DBPayload):
     try:
         response = await http_client.request(
             "POST",
-            f"{DB_URL}/db/new_article",  
+            f"{settings.db.full_url}/db/new_article",  
             json={
                 "user_id": user_id,
-                "payload": payload
+                "payload": payload.model_dump(mode="json")
             }
         )
         response.raise_for_status()
@@ -47,3 +47,7 @@ async def post_new_article(user_id: int, payload: DBPayload):
         ...
     
     return None
+
+
+async def close_http_client():
+    await http_client.aclose()

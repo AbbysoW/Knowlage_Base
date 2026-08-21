@@ -1,1 +1,1 @@
-from .further_reading import process
+from .further_reading import FurtherReadingModel

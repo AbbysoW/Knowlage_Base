@@ -4,7 +4,7 @@
 import httpx
 
 
-from config import DB_URL
+from config import settings
 
 
 # OUTPUT
@@ -19,7 +19,7 @@ async def get_neerest_articles(user_id: int, embedding: list[float]):
     try:
         response = await http_client.request(
             "QUERY",
-            f"{DB_URL}/db/neerest_articles",  
+            f"{settings.db.full_url}/db/neerest_articles",  
             json={
                 "user_id": user_id,
                 "vector": embedding
@@ -50,3 +50,7 @@ async def get_neerest_articles(user_id: int, embedding: list[float]):
         ...
     
     return None
+
+
+async def close_http_client():
+    await http_client.aclose()

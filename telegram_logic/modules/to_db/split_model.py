@@ -3,8 +3,8 @@ from pathlib import Path
 
 from kb_schemas import Chunk, NoteDesigner
 
-from telegram_logic.modules.common.embedding_client import EmbeddingModel
-from telegram_logic.modules.common.llm_client import LLMClient
+from modules.common.embedding_client import EmbeddingModel
+from modules.common.llm_client import LLMClient
 
 class Split:
 
@@ -21,7 +21,7 @@ class Split:
         articles_str - строка с рекомендуемыми статьями
         '''
         try:
-            with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
+            with open(Path(__file__).parent / "sys_prompt.txt", "r") as f:
                 system_prompt = f.read()
 
                 user_content = cls.user_content % (raw_content)
@@ -29,7 +29,7 @@ class Split:
             return LLMClient.send_request(
                 system_prompt=system_prompt, 
                 user_content=user_content, 
-                format=cls.output_format
+                output_format=cls.output_format
                 )
         
         except FileNotFoundError as e:

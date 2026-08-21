@@ -25,7 +25,7 @@ class SummaryModel:
         source_type - тип источника
         '''
         try:
-            with open(Path("TelegramLogic/Modules/MdPipeline/Summary/sys_prompt.txt"), "r") as f:
+            with open(Path(__file__).parent / "sys_prompt.txt", "r") as f:
                 system_prompt = f.read()
         
             user_content = cls.user_content % (raw_content, source_type)
@@ -39,7 +39,7 @@ class SummaryModel:
             print(f"File not found: {e}")
 
     @classmethod
-    def process(cls, user_id: int, data: TranscriptionResult, results: dict):
+    def process(cls, user_id: int, data: TranscriptionResult):
         raw_content = data.text
         source_type = data.source_type
 
@@ -47,4 +47,4 @@ class SummaryModel:
         result = llm_result
     
         if result:
-            results['summary'] = result
+            return result

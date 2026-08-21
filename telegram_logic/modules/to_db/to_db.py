@@ -8,7 +8,7 @@ from typing import Any, Callable
 
 from kb_schemas import DBPayload, NoteDesigner, TranscriptionResult
 
-from telegram_logic.modules.to_db.split_model import Split
+from modules.to_db.split_model import Split
 from .db_client import post_new_article
 # from .db_client import
 
@@ -25,7 +25,7 @@ class ToDB:
         try:
             return DBPayload(
                 chunks=await asyncio.to_thread(Split.split_to_chunks, note_designer),
-                metedata=note_designer.formatter,
+                metadata=note_designer.formatter,
                 md=note_designer.content,
                 raw_data=raw_data
             )
@@ -39,8 +39,8 @@ class ToDB:
             db_payload: DBPayload = await cls._prepare_payload(note_designer, raw_data)
             # Implementation for sending db_payload to database
             body = await post_new_article(user_id, db_payload)
-            if not body['status']:
-                pass
+            if body is None or body.get('status') != 'ok':
+                raise RuntimeError(f"Database write failed: {body!r}")
 
         except Exception as e:
             raise e

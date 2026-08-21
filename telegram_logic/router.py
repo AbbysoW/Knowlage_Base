@@ -1,13 +1,12 @@
 import asyncio
 from datetime import datetime
 import logging
-import threading
 from typing import Any, Callable
 
 
 from kb_schemas import NoteDesigner, TranscriptionResult
 from modules.md_pipeline import prepare_md
-from modules.to_db import send_to_db
+from modules.to_db import ToDB
 
 from config import settings
 
@@ -44,7 +43,7 @@ async def process_data(user_id: int, data: str, data_type: str, date: str):
 
         md: NoteDesigner = await prepare_md(user_id, transcribed)
 
-        await send_to_db(user_id, md)
+        await ToDB.send_to_db(user_id, md, transcribed)
 
     except ValueError as e:
         # send user error message
@@ -61,12 +60,12 @@ async def process_data(user_id: int, data: str, data_type: str, date: str):
 #         return False
 
 
-loop = asyncio.new_event_loop()
-threading.Thread(target=loop.run_forever, daemon=True).start()
-
 def new_data(user_id: int, data: Any, data_type: str, date: datetime):
-    future = asyncio.run_coroutine_threadsafe(
-        process_data(user_id, data, data_type, date), loop
+    task = asyncio.create_task(process_data(user_id, data, data_type, date))
+    background_tasks.add(task)
+    task.add_done_callback(background_tasks.discard)
+    task.add_done_callback(
+        lambda completed: logger.exception("Background task failed", exc_info=completed.exception())
+        if completed.exception() else None
     )
-    future.add_done_callback(lambda f: logger.exception(f.exception()) if f.exception() else None)
     return True

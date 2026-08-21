@@ -1,1 +1,1 @@
-from .relations import process
+from .relations import RelationModel

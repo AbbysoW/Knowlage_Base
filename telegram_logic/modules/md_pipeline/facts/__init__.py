@@ -1,1 +1,1 @@
-from .facts import process
+from .facts import FactsModel

@@ -11,10 +11,11 @@ from config import settings
 
 class EmbeddingModel:
     _model: SentenceTransformer | None = None
+    _lock = threading.Lock()
 
     @classmethod
     def _get_model(cls) -> SentenceTransformer:
-        with threading.Lock():
+        with cls._lock:
             if cls._model is None:
                 cls._model = SentenceTransformer(settings.embedding_model.name)
                 cls._model.eval()

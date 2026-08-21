@@ -36,11 +36,11 @@ class FurtherReadingModel:
             print(f"File not found: {e}")
 
     @classmethod
-    def process(cls, user_id: int, data: TranscriptionResult, results: dict):
+    def process(cls, user_id: int, data: TranscriptionResult):
         raw_content = data.text
 
         llm_result = cls._send_request(raw_content)
         result = llm_result
 
         if result:
-            results['further_reading'] = result
+            return result

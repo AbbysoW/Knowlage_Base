@@ -1,1 +1,1 @@
-from .summary import process
+from .summary import SummaryModel

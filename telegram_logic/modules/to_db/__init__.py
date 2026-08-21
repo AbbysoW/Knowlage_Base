@@ -1,1 +1,1 @@
-from .to_db import send_to_db
+from .to_db import ToDB

@@ -9,10 +9,11 @@ from config import settings
 
 class LLMClient:
     _client: OpenAI | None = None
+    _lock = threading.Lock()
 
     @classmethod
     def _get_client(cls) -> OpenAI:
-        with threading.Lock():
+        with cls._lock:
             if cls._client is None:
                 cls._client = OpenAI(
                     base_url="https://api.deepseek.com",
@@ -21,7 +22,7 @@ class LLMClient:
             return cls._client
 
     @classmethod
-    def send_request(cls, system_prompt: str, user_content: str, format: Any | None = None):
+    def send_request(cls, system_prompt: str, user_content: str, output_format: Any | None = None):
         try:
             response = cls._get_client().chat.completions.parse(
                 model="deepseek-v4-flash",
@@ -29,7 +30,7 @@ class LLMClient:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                response_format=format,
+                response_format=output_format,
             )
             return response.choices[0].message.content
         except RateLimitError as e:
