@@ -21,6 +21,7 @@ class SqliteStore:
     @contextmanager
     def _get_connection():
         """Контекстный менеджер для соединения с БД (авто commit/close)."""
+        settings.db.metadata_store.path.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(settings.db.metadata_store.path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON;")
@@ -113,11 +114,7 @@ class SqliteStore:
     
     @classmethod
     async def create(cls, user_id: int, payload: DBPayload):
-        try:
-            await asyncio.to_thread(cls._create_sync, user_id, payload)
-
-        except Exception as e:
-            pass
+        return await asyncio.to_thread(cls._create_sync, user_id, payload)
         
 
     # READ
@@ -154,9 +151,9 @@ class SqliteStore:
                 DELETE FROM MetaData WHERE user_id = ? AND title = ? AND created = ?
                 """,
                 (
-                    user_id, 
-                    title, 
-                    primary_category or 'Unsorted'
+                    user_id,
+                    title,
+                    primary_category
                 )
             )
 

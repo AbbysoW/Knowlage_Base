@@ -7,12 +7,13 @@
 import json
 import uuid
 import asyncio
+from pathlib import Path
 
 from kb_schemas import DBPayload, Step
 from config import settings
-from database.data.files.api import FileStore
-from database.data.metadata.api import SqliteStore
-from database.data.vectors.api import VectorStore
+from data.files.api import FileStore
+from data.metadata.api import SqliteStore
+from data.vectors.api import VectorStore
 
 
 
@@ -78,9 +79,21 @@ class Transaction:
 
 
 class DBLogic:
+    _user_locks: dict[int, asyncio.Lock] = {}
+
+    @classmethod
+    def _get_user_lock(cls, user_id: int) -> asyncio.Lock:
+        if user_id not in cls._user_locks:
+            cls._user_locks[user_id] = asyncio.Lock()
+        return cls._user_locks[user_id]
+
+    @classmethod
+    async def write_to_db(cls, user_id: int, payload: DBPayload):
+        async with cls._get_user_lock(user_id):
+            await cls._write_to_db(user_id, payload)
 
     @staticmethod
-    async def write_to_db(user_id: int, payload: DBPayload):
+    async def _write_to_db(user_id: int, payload: DBPayload):
         tx = Transaction(payload={"user_id": user_id, **payload.dict()})
 
         tx.add_step(
@@ -96,7 +109,10 @@ class DBLogic:
         tx.add_step(
             name="Vectors",
             do=lambda: VectorStore.create(user_id, payload.chunks, payload.metadata),
-            compensate=lambda: VectorStore.delete_list(user_id, [chunk.path for chunk in payload.chunks]),
+            compensate=lambda: VectorStore.delete(
+                user_id,
+                Path(payload.metadata.primary_category or "Unsorted") / payload.metadata.file_name,
+            ),
         )
 
         await tx.run()  # бросит TransactionError, если что-то не так, с автоматическим откатом

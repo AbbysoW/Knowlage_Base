@@ -8,7 +8,7 @@ import asyncio
 import textwrap
 from pathlib import Path
 
-from kb_schemas.models import DBPayload
+from kb_schemas import DBPayload
 from config import settings
 
 
@@ -34,7 +34,7 @@ class FileStore:
             ---
             title: {payload.metadata.title}
             created: {payload.metadata.created_at}
-            source_type: video
+            source_type: {payload.raw_data.source_type}
             tags: {payload.metadata.tags_to_str()}
             entities: {payload.metadata.entities_to_str()}
             related_articles: {payload.metadata.relations_to_str()}

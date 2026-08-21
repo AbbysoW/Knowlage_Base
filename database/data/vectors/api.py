@@ -26,7 +26,7 @@ class VectorStore:
     # CREATE
     @classmethod
     def _create(cls, user_id: int, chunks: list[Chunk], metadata: Formatter = None):
-        collection = cls.client.get_or_create_collection(name=user_id)
+        collection = cls.client.get_or_create_collection(name=str(user_id))
         
         # article_id = cls._gen_id()
     
@@ -36,7 +36,6 @@ class VectorStore:
         #     ids=[article_id],
         #     embeddings=[chunk.embedding for chunk in chunks],
         #     documents=[chunk.content for chunk in chunks],
-        #     metadatas=[{"path": chunk.path} for chunk in chunks],
         # )
 
 
@@ -45,11 +44,11 @@ class VectorStore:
 
             collection.add(
                     ids=[article_id],
-                    embeddings=chunk.embedding ,
-                    documents=chunk.content,
-                    metadatas={
-                        "path": Path(metadata.primary_category or "Unsorted") / metadata.file_name,
-                        "title": metadata.title},
+                    embeddings=[chunk.embedding],
+                    documents=[chunk.content],
+                    metadatas=[{
+                        "path": str(Path(metadata.primary_category or "Unsorted") / metadata.file_name),
+                        "title": metadata.title}],
                 )
             
         return True
@@ -63,28 +62,29 @@ class VectorStore:
         except Exception as e:
             # logger.error(f"Chroma create failed: user={user_id}, chunks={chunks}: {e}")
             pass
-
-        finally:
-            return {"status": "failed"}
+        
 
     # READ
     @classmethod
     def _read_nearest(cls, user_id: int, vector: list[float], limit: int = 5):
-        collection = cls.client.get_or_create_collection(name=user_id)
-        return collection.query(vector, n_results=limit)
+        collection = cls.client.get_or_create_collection(name=str(user_id))
+        return collection.query(query_embeddings=[vector], n_results=limit)
 
     @classmethod
     async def read_nearest(cls, user_id: int, vector: list[float], limit: int = 5):
         try:
             results = await asyncio.to_thread(cls._read_nearest, user_id, vector, limit)
             
-            return {"status": "read", 
+            ids = results["ids"][0]
+            documents = results["documents"][0]
+            metadatas = results["metadatas"][0]
+            return {"status": "read",
                     "results": [{
-                        'id': id,
+                        'id': article_id,
                         'content': content,
                         'title': metadata.get('title'),
                         'path': metadata.get('path')
-                    } for id, content, metadata in zip(results['ids'], results['documents'], results['metadatas'])]}
+                    } for article_id, content, metadata in zip(ids, documents, metadatas)]}
 
         except Exception as e:
             # logger.error(f"Chroma read failed: user={user_id}, vector={vector}: {e}")

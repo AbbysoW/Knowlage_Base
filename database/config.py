@@ -2,16 +2,12 @@
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from kb_schemas import LogConfig
 
 from pathlib import Path
 
 class Transaction(BaseModel):
     wal_dir: Path = Path("/var/data/wal")
-
-class LogConfig(BaseModel):
-    level: str = "INFO"
-    format: str = "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s"
-
 
 class FileStore(BaseModel):
     name: str = 'file_store'
@@ -19,7 +15,7 @@ class FileStore(BaseModel):
 
 class MetadataStore(BaseModel):
     name: str = 'metadata_store'
-    path: Path = Path("/data/metadata")
+    path: Path = Path("/data/metadata/metadata.sqlite3")
 
 class VectorStore(BaseModel):
     name: str = 'vector_store'
