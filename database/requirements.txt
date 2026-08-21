@@ -1,0 +1,6 @@
+-e ../packages/kb_schemas
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+chromadb

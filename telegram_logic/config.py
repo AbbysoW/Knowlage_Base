@@ -14,7 +14,7 @@ class EmbeddingModelConfig(BaseModel):
 
 
 class DBConfig(BaseModel):
-    name: str
+    name: str = "db"
     host: str = "localhost"
     port: int = 5432
 

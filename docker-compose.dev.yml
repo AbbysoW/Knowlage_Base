@@ -16,18 +16,14 @@ services:
     env_file:
       - .env
 
-    # volumes:
-      # - logs
+    volumes:
+      - ./telegram_logic:/app
+      - ./packages/kb_schemas:/packages/kb_schemas
 
     depends_on:
       database:
         condition: service_healthy
  
-  volumes:
-    db_files:
-    db_metadata:
-    db_vectors:
-    db_wal:
 
   database:
     build:
@@ -42,10 +38,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db_files:/data/files
-      - db_metadata:/data/metadata
-      - db_vectors:/data/vectors
-      - db_wal:/var/data/wal
+      - ./database:/app
+      - ./packages/kb_schemas:/packages/kb_schemas
 
     healthcheck:
       test:

@@ -1,3 +1,9 @@
 -e ../packages/kb_schemas
-python-telegram-bot
+pydantic
+pydantic-settings
+aiogram
 httpx
+python-dotenv
+openai
+sentence-transformers
+torch
