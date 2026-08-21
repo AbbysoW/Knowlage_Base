@@ -1,8 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from datetime import datetime
 
 from typing import Any, Callable, Awaitable
 from pathlib import Path
+
+
+class LogConfig(BaseModel):
+    level: str = "INFO"
+    format: str = "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s"
 
 
 class TranscriptionResult(BaseModel):
@@ -44,10 +49,12 @@ class Formatter(BaseModel):
     file_name: str
     primary_category: str | None = None
 
-    def __post_init__(self):
+    @model_validator(mode="after")
+    def normalize_file_name(self):
         if not self.file_name.endswith(".md"):
             self.file_name = f"{self.file_name}.md"
         self.file_name = self.file_name.title()
+        return self
 
     def tags_to_str(self):
         return '\n' + '\n'.join([f"- {tag}" for tag in self.tags])

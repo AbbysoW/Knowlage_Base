@@ -12,3 +12,4 @@ from .models import Note
 
 # DB Data
 from .models import Chunk, DBPayload
+from .models import LogConfig
