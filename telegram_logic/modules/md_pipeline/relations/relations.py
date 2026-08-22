@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -24,9 +25,11 @@ class RelationModel:
 
     @staticmethod
     async def _send_request_db(user_id: int, raw_content: str):
-        embadding = await asyncio.to_thread(EmbeddingModel.get_embedding, raw_content)
+        with ProcessPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(EmbeddingModel.get_embedding, raw_content)
+        embedding = future.result()
 
-        response = await get_neerest_articles(user_id, embadding)
+        response = await get_neerest_articles(user_id, embedding)
         articles = response.get("articles", []) if response else []
 
         return articles
@@ -64,13 +67,13 @@ class RelationModel:
         return "\n\n".join(formatted_articles)
 
     @classmethod
-    async def process(cls, user_id: int, data: TranscriptionResult) -> list[Relation]:
+    def process(cls, user_id: int, data: TranscriptionResult) -> list[Relation]:
         raw_content = data.text
 
-        articles = await cls._send_request_db(user_id, raw_content)
+        articles = asyncio.run(cls._send_request_db(user_id, raw_content))
         articles_str = cls._format_db_request(articles)
 
-        llm_result: list[Relation] = await cls._send_request(raw_content, articles_str)
+        llm_result: list[Relation] = asyncio.run(cls._send_request(raw_content, articles_str))
         result = llm_result
 
         if result and isinstance(result, list):

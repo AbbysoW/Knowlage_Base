@@ -2,8 +2,11 @@ import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 
-import facts, relations, further_reading, summary
-import designer
+from .facts import FactsModel
+from .relations import RelationModel
+from .further_reading import FurtherReadingModel
+from .summary import SummaryModel
+from .designer import MdDesignerModel
 from kb_schemas import NoteDesigner, TranscriptionResult
 
 logger = logging.getLogger(__name__)
@@ -11,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
     targets = {
-        "facts": facts.FactsModel.process,
-        "relations": relations.RelationModel.process,
-        "further_reading": further_reading.FurtherReadingModel.process,
-        "summary": summary.SummaryModel.process,
+        "facts": FactsModel.process,
+        "relations": RelationModel.process,
+        "further_reading": FurtherReadingModel.process,
+        "summary": SummaryModel.process,
     }
 
     loop = asyncio.get_event_loop()
@@ -43,13 +46,13 @@ async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
         return None
 
     try:
-        md = await loop.run_in_executor(None, designer.MdDesignerModel.process, results)
+        md = await loop.run_in_executor(None, MdDesignerModel.process, results, data)
     except Exception:
-        logger.exception("designer.MdDesignerModel.process упал с ошибкой")
+        logger.exception("MdDesignerModel.process упал с ошибкой")
         raise
 
     if not md:
-        logger.error("designer.MdDesignerModel.process вернул пустой результат")
+        logger.error("MdDesignerModel.process вернул пустой результат")
         return None
 
     return md

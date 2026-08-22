@@ -1,3 +1,5 @@
+import re
+
 from pydantic import BaseModel, model_validator
 from datetime import datetime
 
@@ -51,9 +53,9 @@ class Formatter(BaseModel):
 
     @model_validator(mode="after")
     def normalize_file_name(self):
-        if not self.file_name.endswith(".md"):
-            self.file_name = f"{self.file_name}.md"
-        self.file_name = self.file_name.title()
+        stem = self.file_name[:-3] if self.file_name.lower().endswith(".md") else self.file_name
+        slug = re.sub(r"\s+", "_", stem.strip())
+        self.file_name = f"{slug}.md"
         return self
 
     def tags_to_str(self):
@@ -96,7 +98,7 @@ class DBPayload(BaseModel):
     md: str
     raw_data: TranscriptionResult
 
-class Step:
+class Step(BaseModel):
     name: str
     do: Callable[[], Awaitable[Any]]
     compensate: Callable[[], Awaitable[None]]

@@ -1,6 +1,7 @@
 import os
 import threading
 from typing import Any
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from openai import OpenAI, APIConnectionError, APITimeoutError, RateLimitError
 
@@ -22,6 +23,11 @@ class LLMClient:
             return cls._client
 
     @classmethod
+    @retry(
+        retry=retry_if_exception_type(RateLimitError),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+        stop=stop_after_attempt(4),
+    )
     def send_request(cls, system_prompt: str, user_content: str, output_format: Any | None = None):
         try:
             response = cls._get_client().chat.completions.parse(
