@@ -3,11 +3,13 @@ from datetime import datetime
 import logging
 from typing import Any, Callable
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 from kb_schemas import NoteDesigner, TranscriptionResult
 from modules.md_pipeline import prepare_md
 from modules.to_db import ToDB
-
+from modules.common.task_queue import TaskQueue
 from config import settings
 
 
@@ -15,14 +17,10 @@ logging.basicConfig(level=settings.log.level)
 logger = logging.getLogger(__name__)
 
 
-background_tasks = set()
-
-
-
 # Transcribe
 
 transcriber_registry: dict[str, Callable[[Any], TranscriptionResult]] = {
-    'text': lambda x: x,
+    'text': lambda x: TranscriptionResult(text=x, source_type='text'),
     # 'audio': 
     # 'image': 
     # 'video': 
@@ -36,7 +34,9 @@ async def transcribe(data: Any, data_type: str) -> TranscriptionResult:
         raise ValueError(f"Error occurred while transcribing data of type {data_type}: {e}")
 
 
-# 
+
+
+
 async def process_data(user_id: int, data: str, data_type: str, date: str):
     try:
         transcribed = await transcribe(data, data_type)
@@ -58,14 +58,8 @@ async def process_data(user_id: int, data: str, data_type: str, date: str):
 #         return True
 #     except Exception as e:
 #         return False
+task_queue = TaskQueue(handler=process_data, worker_count=3, maxsize=200)
 
 
 def new_data(user_id: int, data: Any, data_type: str, date: datetime):
-    task = asyncio.create_task(process_data(user_id, data, data_type, date))
-    background_tasks.add(task)
-    task.add_done_callback(background_tasks.discard)
-    task.add_done_callback(
-        lambda completed: logger.exception("Background task failed", exc_info=completed.exception())
-        if completed.exception() else None
-    )
-    return True
+    return task_queue.submit(user_id, data, data_type, date)
