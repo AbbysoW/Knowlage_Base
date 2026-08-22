@@ -22,8 +22,10 @@ class SqliteStore:
     def _get_connection():
         """Контекстный менеджер для соединения с БД (авто commit/close)."""
         settings.db.metadata_store.path.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(settings.db.metadata_store.path)
+        conn = sqlite3.connect(settings.db.metadata_store.db_file)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
         conn.execute("PRAGMA foreign_keys = ON;")
         try:
             yield conn
@@ -147,23 +149,13 @@ class SqliteStore:
     def _delete(cls, user_id: int, title: str, primary_category: str | None):
         with cls._get_connection() as conn:
             cursor = conn.execute(
-                """
-                DELETE FROM MetaData WHERE user_id = ? AND title = ? AND created = ?
-                """,
-                (
-                    user_id,
-                    title,
-                    primary_category
-                )
+                "DELETE FROM MetaData WHERE user_id = ? AND title = ? AND category IS ?",
+                (user_id, title, primary_category),
             )
 
     @classmethod
     async def delete(cls, user_id: int, title: str, primary_category: str | None):
         await asyncio.to_thread(cls._delete, user_id, title, primary_category)
-
-
-SqliteStore.init_db()
-
 
 
 

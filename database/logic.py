@@ -8,6 +8,7 @@ import json
 import uuid
 import asyncio
 from pathlib import Path
+from weakref import WeakValueDictionary
 
 from kb_schemas import DBPayload, Step
 from config import settings
@@ -38,7 +39,10 @@ class Transaction:
         self.steps.append(Step(name=name, do=do, compensate=compensate))
         return self
 
-    def _write_wal(self, status: str):
+    async def _write_wal(self, status: str):
+        await asyncio.to_thread(self._write_wal_sync, status)
+
+    def _write_wal_sync(self, status: str):
         settings.tx.wal_dir.mkdir(parents=True, exist_ok=True)
         self._wal_path.write_text(json.dumps({
             "tx_id": self.tx_id,
@@ -52,14 +56,14 @@ class Transaction:
         self._wal_path.unlink(missing_ok=True)
 
     async def run(self):
-        self._write_wal(status="pending")
+        await self._write_wal(status="pending")
         completed: list[Step] = []
         try:
             for step in self.steps:
                 step.result = await step.do()
                 step.done = True
                 completed.append(step)
-                self._write_wal(status="pending")  # прогресс на диск
+                await self._write_wal(status="pending")  # прогресс на диск
             self._clear_wal()  # успех — журнал больше не нужен
         except Exception as e:
             failed_name = self.steps[len(completed)].name
@@ -74,12 +78,12 @@ class Transaction:
             except Exception as comp_err:
                 # компенсация упала — это критично, логируем отдельно,
                 # это уже не авто-восстановимо, нужен alert/ручной разбор
-                self._write_wal(status=f"rollback_failed:{step.name}:{comp_err}")
+                await self._write_wal(status=f"rollback_failed:{step.name}:{comp_err}")
                 raise
 
 
 class DBLogic:
-    _user_locks: dict[int, asyncio.Lock] = {}
+    _user_locks: WeakValueDictionary[int, asyncio.Lock] = {}
 
     @classmethod
     def _get_user_lock(cls, user_id: int) -> asyncio.Lock:
@@ -94,7 +98,7 @@ class DBLogic:
 
     @staticmethod
     async def _write_to_db(user_id: int, payload: DBPayload):
-        tx = Transaction(payload={"user_id": user_id, **payload.dict()})
+        tx = Transaction(payload={"user_id": user_id, **payload.model_dump(mode="json")})
 
         tx.add_step(
             name="Files",

@@ -1,13 +1,33 @@
 
 
-from fastapi import FastAPI, HTTPException
+import json
+
+from fastapi import FastAPI, HTTPException, logger
+from fastapi.concurrency import asynccontextmanager
 from pydantic import BaseModel
 
 from kb_schemas import DBPayload
 from logic import DBLogic
-app = FastAPI()
+from config import settings
 
 
+async def recover_pending_transactions():
+    return # пока не надо
+    for wal_file in settings.tx.wal_dir.glob("*.json"):
+        state = json.loads(wal_file.read_text())
+        if state["status"].startswith("rollback_failed"):
+            logger.critical("Требуется ручной разбор: %s", wal_file)
+            continue
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    recover_pending_transactions()
+    yield
+    # Clean up the ML models and release the resources
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 class NewArticle(BaseModel):
@@ -30,3 +50,16 @@ class NeerestArticlesQuery(BaseModel):
 async def get_neerest_articles(query: NeerestArticlesQuery):
     response = await DBLogic.read_nearest(query.user_id, query.vector)
     return {"articles": response.get("results", [])} if response else {"articles": []}
+
+
+
+
+
+
+
+
+
+
+
+
+

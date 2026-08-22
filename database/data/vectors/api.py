@@ -12,10 +12,13 @@ from config import settings
 
 
 class VectorStore:
+    _client: chromadb.PersistentClient | None = None
 
     @classmethod
-    def init_db(cls):
-        cls.client = chromadb.PersistentClient(path=settings.db.vector_store.path)
+    def _get_client(cls) -> chromadb.PersistentClient:
+        if cls._client is None:
+            cls._client = chromadb.PersistentClient(path=str(settings.db.vector_store.path))
+        return cls._client
 
     @staticmethod
     def _gen_id() -> str:
@@ -26,7 +29,7 @@ class VectorStore:
     # CREATE
     @classmethod
     def _create(cls, user_id: int, chunks: list[Chunk], metadata: Formatter = None):
-        collection = cls.client.get_or_create_collection(name=str(user_id))
+        collection = cls._get_client().get_or_create_collection(name=str(user_id))
         
         # article_id = cls._gen_id()
     
@@ -67,7 +70,7 @@ class VectorStore:
     # READ
     @classmethod
     def _read_nearest(cls, user_id: int, vector: list[float], limit: int = 5):
-        collection = cls.client.get_or_create_collection(name=str(user_id))
+        collection = cls._get_client().get_or_create_collection(name=str(user_id))
         return collection.query(query_embeddings=[vector], n_results=limit)
 
     @classmethod
@@ -95,7 +98,7 @@ class VectorStore:
 # DELETE
     @classmethod
     def _delete(cls, user_id: int, path: Path) -> bool:
-        collection = cls.client.get_or_create_collection(name=str(user_id))
+        collection = cls._get_client().get_or_create_collection(name=str(user_id))
         collection.delete(where={"path": str(path)})
         return True
 

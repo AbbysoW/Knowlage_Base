@@ -17,6 +17,10 @@ class MetadataStore(BaseModel):
     name: str = 'metadata_store'
     path: Path = Path("/data/metadata")
 
+    @property
+    def db_file(self) -> Path:
+        return self.path / "metadata.sqlite3"
+
 class VectorStore(BaseModel):
     name: str = 'vector_store'
     path: Path = Path("/data/vectors")
