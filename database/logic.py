@@ -7,16 +7,18 @@
 import json
 import uuid
 import asyncio
+import logging
 from pathlib import Path
 from weakref import WeakValueDictionary
 
 from kb_schemas import DBPayload, Step
 from config import settings
-from data.files.api import FileStore
-from data.metadata.api import SqliteStore
-from data.vectors.api import VectorStore
+from data.files import FileStore
+from data.metadata import SqliteStore
+from data.vectors import VectorStore
 
 
+logger = logging.getLogger(__name__)
 
 
 class TransactionError(Exception):
@@ -63,9 +65,10 @@ class Transaction:
                 step.result = await step.do()
                 step.done = True
                 completed.append(step)
-                await self._write_wal(status="pending")  # прогресс на диск
-            self._clear_wal()  # успех — журнал больше не нужен
+                await self._write_wal(status="pending")
+            self._clear_wal()
         except Exception as e:
+            logger.error(f"Transaction failed: {e}")
             failed_name = self.steps[len(completed)].name
             await self._rollback(completed)
             self._clear_wal()
@@ -78,6 +81,7 @@ class Transaction:
             except Exception as comp_err:
                 # компенсация упала — это критично, логируем отдельно,
                 # это уже не авто-восстановимо, нужен alert/ручной разбор
+                logger.error(f"Rollback failed for step '{step.name}': {comp_err}")
                 await self._write_wal(status=f"rollback_failed:{step.name}:{comp_err}")
                 raise
 

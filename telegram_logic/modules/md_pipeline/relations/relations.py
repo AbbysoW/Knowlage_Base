@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
+import logging
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -8,6 +9,9 @@ from kb_schemas import Relation, TranscriptionResult
 from modules.common.embedding_client import EmbeddingModel
 from modules.common.llm_client import LLMClient
 from .db_search_client import get_neerest_articles
+
+
+logger = logging.getLogger(__name__)
 
 
 class RelationModel:
@@ -53,7 +57,7 @@ class RelationModel:
             )
 
         except FileNotFoundError as e:
-            print(f"File not found: {e}")
+            logger.error(f"File not found: {e}")
 
 
     @staticmethod

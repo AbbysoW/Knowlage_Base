@@ -3,6 +3,7 @@
 
 
 import asyncio
+import logging
 from pathlib import Path
 from time import time
 import chromadb
@@ -10,6 +11,8 @@ import chromadb
 from kb_schemas import Chunk, Formatter
 from config import settings
 
+
+logger = logging.getLogger(__name__)
 
 class VectorStore:
     _client: chromadb.PersistentClient | None = None
@@ -62,9 +65,12 @@ class VectorStore:
             if await asyncio.to_thread(cls._create, user_id, chunks, metadata):
                 return {"status": "created"}
             return {"status": "failed"}
+        except ConnectionRefusedError as e:
+            logger.error(f"Create failed: Could not connect to vector store: {e}")
+            raise e
         except Exception as e:
-            # logger.error(f"Chroma create failed: user={user_id}, chunks={chunks}: {e}")
-            pass
+            logger.error(f"Create failed: {e}")
+            raise e
         
 
     # READ
@@ -89,11 +95,12 @@ class VectorStore:
                         'path': metadata.get('path')
                     } for article_id, content, metadata in zip(ids, documents, metadatas)]}
 
+        except ConnectionRefusedError as e:
+            logger.error(f"Read failed: Could not connect to vector store: {e}")
+            raise e
         except Exception as e:
-            # logger.error(f"Chroma read failed: user={user_id}, vector={vector}: {e}")
-            
-            pass
-    
+            logger.error(f"Read failed: {e}")
+            raise e
 
 # DELETE
     @classmethod
@@ -107,9 +114,12 @@ class VectorStore:
         try:
             ok = await asyncio.to_thread(cls._delete, user_id, path)
             return {"status": "deleted" if ok else "failed", "path": str(path)}
+        except ConnectionRefusedError as e:
+            logger.error(f"Delete failed: Could not connect to vector store: {e}")
+            raise e
         except Exception as e:
-            # logger.error(f"Chroma delete failed: user={user_id}, path={path}: {e}")
-            return {"status": "failed", "path": str(path), "error": str(e)}
+            logger.error(f"Delete failed: {e}")
+            raise e
 
     @classmethod
     async def delete_list(cls, user_id: int, paths: list[Path]) -> dict:

@@ -1,11 +1,15 @@
 import os
 import threading
+import logging
 from typing import Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from openai import OpenAI, APIConnectionError, APITimeoutError, RateLimitError
 
 from config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
@@ -40,8 +44,8 @@ class LLMClient:
             )
             return response.choices[0].message.content
         except RateLimitError as e:
-            print(f"Rate limit exceeded: {e}")
+            logger.error(f"Rate limit exceeded: {e}")
         except APIConnectionError as e:
-            print(f"API connection error: {e}")
+            logger.error(f"API connection error: {e}")
         except APITimeoutError as e:
-            print(f"API timeout error: {e}")
+            logger.error(f"API timeout error: {e}")

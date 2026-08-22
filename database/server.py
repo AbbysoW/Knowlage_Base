@@ -1,14 +1,18 @@
 
 
 import json
+import logging
 
-from fastapi import FastAPI, HTTPException, logger
+from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import asynccontextmanager
 from pydantic import BaseModel
 
 from kb_schemas import DBPayload
 from logic import DBLogic
 from config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 async def recover_pending_transactions():
@@ -38,9 +42,9 @@ class NewArticle(BaseModel):
 async def post_new_article(article: NewArticle):
     try:
         await DBLogic.write_to_db(article.user_id, article.payload)
-    except Exception as exc:
-        pass
-
+    except Exception as e:
+        logger.error(f"Failed to create article: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create article")
 
 class NeerestArticlesQuery(BaseModel):
     user_id: int
@@ -48,18 +52,9 @@ class NeerestArticlesQuery(BaseModel):
 
 @app.api_route('/db/neerest_articles', methods=["QUERY"])
 async def get_neerest_articles(query: NeerestArticlesQuery):
-    response = await DBLogic.read_nearest(query.user_id, query.vector)
-    return {"articles": response.get("results", [])} if response else {"articles": []}
-
-
-
-
-
-
-
-
-
-
-
-
-
+    try:
+        response = await DBLogic.read_nearest(query.user_id, query.vector)
+        return {"articles": response.get("results", [])} if response else {"articles": []}
+    except Exception as e:
+        logger.error(f"Failed to read nearest articles: {e}")
+        raise HTTPException(status_code=500, detail="Failed to read nearest articles")

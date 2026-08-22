@@ -7,12 +7,17 @@
 import asyncio
 import sqlite3
 import json
+import logging
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from contextlib import contextmanager
+
 from config import settings
 from kb_schemas import DBPayload
+
+
+logger = logging.getLogger(__name__)
 
 
 class SqliteStore:
@@ -116,8 +121,17 @@ class SqliteStore:
     
     @classmethod
     async def create(cls, user_id: int, payload: DBPayload):
-        return await asyncio.to_thread(cls._create_sync, user_id, payload)
-        
+        try:
+            return await asyncio.to_thread(cls._create_sync, user_id, payload)
+        except sqlite3.OperationalError as e:
+            logger.error(f"Create failed: couldn't connect to the database: {e}")
+            raise sqlite3.OperationalError(e)
+        except sqlite3.IntegrityError as e:
+            logger.error(f"Create failed: integrity error occurred: {e}")
+            raise sqlite3.IntegrityError(e)
+        except Exception as e:
+            logger.error(f"Create failed: {e}")
+            raise e
 
     # READ
     @classmethod
@@ -131,9 +145,14 @@ class SqliteStore:
     @classmethod
     async def read_metadata_by_id(cls, record_id: int) -> Optional[Dict[str, Any]]:
         """Возвращает одну запись по id или None, если не найдена."""
-        return await asyncio.to_thread(cls._read_metadata_by_id, record_id)
-
-
+        try:
+            return await asyncio.to_thread(cls._read_metadata_by_id, record_id)
+        except sqlite3.OperationalError as e:
+            logger.error(f"Read failed: couldn't connect to the database: {e}")
+            raise sqlite3.OperationalError(e)
+        except Exception as e:
+            logger.error(f"Read failed: {e}")
+            raise e
 
     @classmethod
     async def read(cls, user_id: int, file_name: str, primary_category: str | None):
@@ -155,9 +174,13 @@ class SqliteStore:
 
     @classmethod
     async def delete(cls, user_id: int, title: str, primary_category: str | None):
-        await asyncio.to_thread(cls._delete, user_id, title, primary_category)
-
-
-
+        try:
+            await asyncio.to_thread(cls._delete, user_id, title, primary_category)
+        except sqlite3.OperationalError as e:
+            logger.error(f"Delete failed: couldn't connect to the database: {e}")
+            raise sqlite3.OperationalError(e)
+        except Exception as e:
+            logger.error(f"Delete failed: {e}")
+            raise e
 
 

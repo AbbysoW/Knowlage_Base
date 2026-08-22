@@ -1,9 +1,14 @@
+import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 
 from kb_schemas import TranscriptionResult
 from modules.common.llm_client import LLMClient
+
+
+logger = logging.getLogger(__name__)
+
 
 class SummaryModel:
     load_dotenv()
@@ -36,7 +41,7 @@ class SummaryModel:
                 )
         
         except FileNotFoundError as e:
-            print(f"File not found: {e}")
+            logger.error(f"File not found: {e}")
 
     @classmethod
     def process(cls, user_id: int, data: TranscriptionResult):

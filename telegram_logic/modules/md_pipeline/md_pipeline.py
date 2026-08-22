@@ -6,8 +6,9 @@ from .facts import FactsModel
 from .relations import RelationModel
 from .further_reading import FurtherReadingModel
 from .summary import SummaryModel
-from .designer import MdDesignerModel
+from .designer import MdDesignerModel 
 from kb_schemas import NoteDesigner, TranscriptionResult
+
 
 logger = logging.getLogger(__name__)
 

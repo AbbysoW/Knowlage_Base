@@ -7,9 +7,13 @@
 import asyncio
 import textwrap
 from pathlib import Path
+import logging
 
 from kb_schemas import DBPayload
 from config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class FileStore:
@@ -52,10 +56,16 @@ class FileStore:
             await asyncio.to_thread(cls._create_sync, user_id, payload)
 
         except FileExistsError as e:
-            pass
+            logger.error(f'File {cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)} already exists')
+            raise FileExistsError(e)
 
         except FileNotFoundError as e:
-            pass
+            logger.error(f'File {cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)} was not created')
+            raise FileNotFoundError(e)
+        except Exception as e:
+            logger.error(f"Create failed: {e}")
+            raise e
+
 
     @classmethod
     async def read(cls, user_id: int, file_name: str, primary_category: str | None):
@@ -76,6 +86,9 @@ class FileStore:
     async def delete(cls, user_id: int, file_name: str, primary_category: str | None):
         try:
             await asyncio.to_thread(cls._delete_sync, user_id, file_name, primary_category)
+        except PermissionError as e:
+            logger.error(f"Delete failed: Permission denied for file {cls._build_path(user_id, primary_category, file_name)}")
+            raise e
         except Exception as e:
-            # logger.error(f"Delete failed: user={user_id}, file={file_name}: {e}")
-            raise
+            logger.error(f"Delete failed: {e}")
+            raise e
