@@ -1,6 +1,8 @@
 import os
+import textwrap
 from pathlib import Path
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 from kb_schemas import Fact, TranscriptionResult
 from modules.common.llm_client import LLMClient
@@ -9,11 +11,15 @@ from modules.common.llm_client import LLMClient
 class FactsModel:
     load_dotenv()
     
-    user_content = """
+    user_content = textwrap.dedent("""\
         Основной документ:
         %s
-    """
-    output_format = list[Fact]
+    """)
+
+    class OutputFormat(BaseModel):
+        facts: list[Fact]
+
+    output_format = OutputFormat
 
     @classmethod
     def _send_request(cls, raw_content: str) -> list[Fact]:
@@ -29,8 +35,9 @@ class FactsModel:
             return LLMClient.send_request(
                 system_prompt=system_prompt,
                 user_content=user_content,
-                output_format=cls.output_format
-            )
+                output_format=cls.output_format,
+                temperature=0.0,
+            ).facts
         
         except FileNotFoundError as e:
             print(f"File not found: {e}")

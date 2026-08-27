@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import json
 import uuid
 import asyncio
@@ -58,6 +52,7 @@ class Transaction:
         self._wal_path.unlink(missing_ok=True)
 
     async def run(self):
+        logger.info("Knowledge transaction started: tx_id=%s, steps=%s", self.tx_id, len(self.steps))
         await self._write_wal(status="pending")
         completed: list[Step] = []
         try:
@@ -67,8 +62,9 @@ class Transaction:
                 completed.append(step)
                 await self._write_wal(status="pending")
             self._clear_wal()
+            logger.info("Knowledge transaction completed: tx_id=%s, steps=%s", self.tx_id, len(completed))
         except Exception as e:
-            logger.error(f"Transaction failed: {e}")
+            logger.exception("Transaction failed")
             failed_name = self.steps[len(completed)].name
             await self._rollback(completed)
             self._clear_wal()
@@ -78,27 +74,30 @@ class Transaction:
         for step in reversed(completed):
             try:
                 await step.compensate()
-            except Exception as comp_err:
+            except Exception as e:
                 # компенсация упала — это критично, логируем отдельно,
                 # это уже не авто-восстановимо, нужен alert/ручной разбор
-                logger.error(f"Rollback failed for step '{step.name}': {comp_err}")
-                await self._write_wal(status=f"rollback_failed:{step.name}:{comp_err}")
+                logger.critical(f"Rollback failed for step '{step.name}'", exc_info=True)
+                await self._write_wal(status=f"rollback_failed:{step.name}")
                 raise
 
 
 class DBLogic:
-    _user_locks: WeakValueDictionary[int, asyncio.Lock] = {}
+    _user_locks: dict[int, asyncio.Lock] = {}
+    _locks_guard = asyncio.Lock()
 
     @classmethod
-    def _get_user_lock(cls, user_id: int) -> asyncio.Lock:
-        if user_id not in cls._user_locks:
-            cls._user_locks[user_id] = asyncio.Lock()
-        return cls._user_locks[user_id]
+    async def _get_user_lock(cls, user_id: int) -> asyncio.Lock:
+        async with cls._locks_guard:
+            if user_id not in cls._user_locks:
+                cls._user_locks[user_id] = asyncio.Lock()
+            return cls._user_locks[user_id]
 
     @classmethod
     async def write_to_db(cls, user_id: int, payload: DBPayload):
-        async with cls._get_user_lock(user_id):
+        async with await cls._get_user_lock(user_id):
             await cls._write_to_db(user_id, payload)
+        logger.info("Knowledge note committed: user_id=%s, title=%s", user_id, payload.metadata.title)
 
     @staticmethod
     async def _write_to_db(user_id: int, payload: DBPayload):

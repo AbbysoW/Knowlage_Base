@@ -24,6 +24,7 @@ class LLMClient:
                     base_url="https://api.deepseek.com",
                     api_key=settings.deepseek_api_key,
                 )
+                logger.info("LLM client initialized: provider=deepseek")
             return cls._client
 
     @classmethod
@@ -32,7 +33,7 @@ class LLMClient:
         wait=wait_exponential(multiplier=1, min=2, max=30),
         stop=stop_after_attempt(4),
     )
-    def send_request(cls, system_prompt: str, user_content: str, output_format: Any | None = None):
+    def send_request(cls, system_prompt: str, user_content: str, output_format: Any | None = None, temperature: float = 0.5):
         try:
             response = cls._get_client().chat.completions.parse(
                 model="deepseek-v4-flash",
@@ -41,11 +42,12 @@ class LLMClient:
                     {"role": "user", "content": user_content},
                 ],
                 response_format=output_format,
+                temperature=temperature,
             )
             return response.choices[0].message.content
-        except RateLimitError as e:
-            logger.error(f"Rate limit exceeded: {e}")
-        except APIConnectionError as e:
-            logger.error(f"API connection error: {e}")
-        except APITimeoutError as e:
-            logger.error(f"API timeout error: {e}")
+        except RateLimitError:
+            logger.warning("LLM rate limit reached; retrying request")
+        except APIConnectionError:
+            logger.error("LLM provider connection failed", exc_info=True)
+        except APITimeoutError:
+            logger.error("LLM provider request timed out", exc_info=True)

@@ -122,16 +122,18 @@ class SqliteStore:
     @classmethod
     async def create(cls, user_id: int, payload: DBPayload):
         try:
-            return await asyncio.to_thread(cls._create_sync, user_id, payload)
+            result = await asyncio.to_thread(cls._create_sync, user_id, payload)
+            logger.info("Metadata stored: user_id=%s, title=%s", user_id, payload.metadata.title)
+            return result
         except sqlite3.OperationalError as e:
             logger.error(f"Create failed: couldn't connect to the database: {e}")
-            raise sqlite3.OperationalError(e)
+            raise
         except sqlite3.IntegrityError as e:
             logger.error(f"Create failed: integrity error occurred: {e}")
-            raise sqlite3.IntegrityError(e)
+            raise
         except Exception as e:
-            logger.error(f"Create failed: {e}")
-            raise e
+            logger.exception("Create failed")
+            raise
 
     # READ
     @classmethod
@@ -149,10 +151,10 @@ class SqliteStore:
             return await asyncio.to_thread(cls._read_metadata_by_id, record_id)
         except sqlite3.OperationalError as e:
             logger.error(f"Read failed: couldn't connect to the database: {e}")
-            raise sqlite3.OperationalError(e)
+            raise
         except Exception as e:
-            logger.error(f"Read failed: {e}")
-            raise e
+            logger.exception("Read failed")
+            raise
 
     @classmethod
     async def read(cls, user_id: int, file_name: str, primary_category: str | None):
@@ -171,16 +173,19 @@ class SqliteStore:
                 "DELETE FROM MetaData WHERE user_id = ? AND title = ? AND category IS ?",
                 (user_id, title, primary_category),
             )
+            if cursor.rowcount == 0:
+                logger.warning(f"Compensating delete matched 0 rows: user={user_id} title={title}")
 
     @classmethod
     async def delete(cls, user_id: int, title: str, primary_category: str | None):
         try:
             await asyncio.to_thread(cls._delete, user_id, title, primary_category)
+            logger.info("Metadata deleted: user_id=%s, title=%s, category=%s", user_id, title, primary_category)
         except sqlite3.OperationalError as e:
             logger.error(f"Delete failed: couldn't connect to the database: {e}")
-            raise sqlite3.OperationalError(e)
+            raise
         except Exception as e:
-            logger.error(f"Delete failed: {e}")
-            raise e
+            logger.exception("Delete failed")
+            raise
 
 

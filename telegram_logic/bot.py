@@ -1,5 +1,6 @@
 import asyncio
 import os
+import logging
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F
@@ -14,6 +15,8 @@ from config import settings
 
 
 load_dotenv()
+logger = logging.getLogger(__name__)
+
 
 token = settings.telegram_api_token
 bot = Bot(token=token)
@@ -23,6 +26,7 @@ dp = Dispatcher()
 @dp.message(F.text, ~F.text.startswith('/'))
 async def catch_message(message: Message):
     status = new_data(message.from_user.id, message.text, 'text', datetime.now().isoformat())
+    logger.info("Incoming text queued: user_id=%s, accepted=%s", message.from_user.id, status)
     if status:
         await message.reply("Text received!")
     else:
@@ -59,14 +63,17 @@ async def catch_message(message: Message):
 # Start
 @dp.message(CommandStart())
 async def start(message: Message):
+    logger.info("Bot session started by user_id=%s", message.from_user.id)
     await message.reply("Welcome to the bot!")
 
 
 async def run_bot():
     task_queue.start()
+    logger.info("Telegram bot polling started")
     try:
         await dp.start_polling(bot)
     finally:
+        logger.info("Telegram bot shutdown initiated")
         await task_queue.stop()
         await close_search_client()
         await close_db_client()

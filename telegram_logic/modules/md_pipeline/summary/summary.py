@@ -1,5 +1,6 @@
 import logging
 import os
+import textwrap
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -13,15 +14,13 @@ logger = logging.getLogger(__name__)
 class SummaryModel:
     load_dotenv()
     
-    user_content = """
-        Выдели из этого хаоса главное, структурируй и сделай готовую атомарную заметку для базы знаний.
-
+    user_content = textwrap.dedent("""\
         Текст для анализа:
         %s
         
         Дополнительная информация:
         source_type: %s
-    """
+    """)
 
     @classmethod
     def _send_request(cls, raw_content: str, source_type: str) -> str:
@@ -37,11 +36,13 @@ class SummaryModel:
         
             return LLMClient.send_request(
                 system_prompt=system_prompt, 
-                user_content=user_content
+                user_content=user_content,
+                temperature=0.2,
                 )
         
         except FileNotFoundError as e:
-            logger.error(f"File not found: {e}")
+            logger.error("Summary prompt unavailable: path=%s", Path(__file__).parent / "sys_prompt.txt", exc_info=True)
+            raise
 
     @classmethod
     def process(cls, user_id: int, data: TranscriptionResult):

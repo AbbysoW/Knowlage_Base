@@ -13,7 +13,6 @@ from modules.common.task_queue import TaskQueue
 from config import settings
 
 
-logging.basicConfig(level=settings.log.level)
 logger = logging.getLogger(__name__)
 
 
@@ -27,37 +26,48 @@ transcriber_registry: dict[str, Callable[[Any], TranscriptionResult]] = {
 }
 
 async def transcribe(data: Any, data_type: str) -> TranscriptionResult:
-    try: 
+    try:
         return transcriber_registry[data_type](data)
+    except KeyError as e:
+        # неизвестный/неподдерживаемый data_type — раньше проваливалось как
+        # необработанный KeyError мимо except ValueError ниже
+        logger.error(
+            "transcribe: неподдерживаемый data_type=%s (user data не транскрибирован)",
+            data_type,
+            exc_info=True,
+        )
+        raise ValueError(f"Unsupported data_type: {data_type!r}") from e
     except ValueError as e:
-        # log err
-        raise ValueError(f"Error occurred while transcribing data of type {data_type}: {e}")
+        logger.error(
+            "transcribe: ошибка транскрибации, data_type=%s",
+            data_type,
+            exc_info=True,
+        )
+        raise ValueError(f"Error occurred while transcribing data of type {data_type}: {e}") from e
 
 
 
-
-
-async def process_data(user_id: int, data: str, data_type: str, date: str):
+async def process_data(user_id: int, data: str, data_type: str, date: datetime):
     try:
         transcribed = await transcribe(data, data_type)
+        transcribed.timestamp = date
 
         md: NoteDesigner = await prepare_md(user_id, transcribed)
 
         await ToDB.send_to_db(user_id, md, transcribed)
 
-    except ValueError as e:
+    except ValueError:
+        logger.error(
+            "process_data: некорректные входные данные (user_id=%s, data_type=%s)",
+            user_id, data_type,
+            exc_info=True,
+        )
         # send user error message
         pass
+    except Exception:
+        raise
 
-# def new_data(user_id: int, data: Any, data_type: str, date: datetime):
-#     try:
-#         task = asyncio.create_task(process_data(user_id, data, data_type, date))
-#         background_tasks.add(task)
-#         task.add_done_callback(background_tasks.discard)
 
-#         return True
-#     except Exception as e:
-#         return False
 task_queue = TaskQueue(handler=process_data, worker_count=3, maxsize=200)
 
 

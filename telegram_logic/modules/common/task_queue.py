@@ -41,14 +41,37 @@ class TaskQueue:
         await self._queue.join()
         for w in self._workers:
             w.cancel()
-        await asyncio.gather(*self._workers, return_exceptions=True)
+        results = await asyncio.gather(*self._workers, return_exceptions=True)
+
+        for worker_id, result in enumerate(results):
+            if isinstance(result, Exception) and not isinstance(result, asyncio.CancelledError):
+                logger.error(
+                    "TaskQueue.stop: worker %d завершился с ошибкой при остановке",
+                    worker_id,
+                    exc_info=(type(result), result, result.__traceback__),
+                )
+
+        logger.info("TaskQueue: остановлено %d воркеров", len(self._workers))
+
 
     def submit(self, user_id: int, data: Any, data_type: str, date: datetime) -> bool:
         try:
             self._queue.put_nowait(Job(user_id, data, data_type, date))
             return True
         except asyncio.QueueFull:
-            logger.warning("Очередь переполнена, job для user=%s отброшен", user_id)
+            logger.warning(
+                "TaskQueue.submit: очередь переполнена, job для user=%s отброшен",
+                user_id,
+            )
+            return False
+        except Exception:
+            # раньше любая другая ошибка (например, невалидные данные для Job)
+            # ушла бы наверх необработанной и без единой строчки в лог
+            logger.error(
+                "TaskQueue.submit: не удалось создать/поставить job для user=%s, data_type=%s",
+                user_id, data_type,
+                exc_info=True,
+            )
             return False
 
     async def _worker_loop(self, worker_id: int):
@@ -57,8 +80,10 @@ class TaskQueue:
             try:
                 await self._handler(job.user_id, job.data, job.data_type, job.date)
             except Exception:
-                logger.exception(
-                    "Worker %d: job для user=%s упал", worker_id, job.user_id
+                logger.error(
+                    "TaskQueue._worker_loop: worker %d, job для user=%s (data_type=%s) упал",
+                    worker_id, job.user_id, job.data_type,
+                    exc_info=True,
                 )
             finally:
                 self._queue.task_done()
