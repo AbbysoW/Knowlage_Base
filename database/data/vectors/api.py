@@ -25,6 +25,7 @@ class VectorStore:
         with cls._lock:
             if cls._client is None:
                 cls._client = chromadb.PersistentClient(path=str(settings.db.vector_store.path))
+                logger.info("Vector store initialized: path=%s", settings.db.vector_store.path)
             return cls._client
 
     @staticmethod
@@ -56,6 +57,7 @@ class VectorStore:
     async def create(cls, user_id: int, chunks: list[Chunk], metadata: Formatter = None):
         try:
             if await asyncio.to_thread(cls._create, user_id, chunks, metadata):
+                logger.info("Vectors created: user_id=%s, count=%s", user_id, len(chunks))
                 return {"status": "created"}
             return {"status": "failed"}
         except ConnectionRefusedError as e:
@@ -80,13 +82,15 @@ class VectorStore:
             ids = results["ids"][0]
             documents = results["documents"][0]
             metadatas = results["metadatas"][0]
-            return {"status": "read",
-                    "results": [{
-                        'id': article_id,
-                        'content': content,
-                        'title': metadata.get('title'),
-                        'path': metadata.get('path')
-                    } for article_id, content, metadata in zip(ids, documents, metadatas)]}
+            response = {"status": "read",
+                        "results": [{
+                            'id': article_id,
+                            'content': content,
+                            'title': metadata.get('title'),
+                            'path': metadata.get('path')
+                            } for article_id, content, metadata in zip(ids, documents, metadatas)]}
+            logger.info("Vectors queried: user_id=%s, count=%s, limit=%s", user_id, len(response["results"]), limit)
+            return response
 
         except ConnectionRefusedError as e:
             logger.error(f"Read failed: Could not connect to vector store: {e}")
@@ -106,6 +110,7 @@ class VectorStore:
     async def delete(cls, user_id: int, path: Path) -> dict:
         try:
             ok = await asyncio.to_thread(cls._delete, user_id, path)
+            logger.info("Vectors deleted: user_id=%s, path=%s", user_id, path)
             return {"status": "deleted" if ok else "failed", "path": str(path)}
         except ConnectionRefusedError as e:
             logger.error(f"Delete failed: Could not connect to vector store: {e}")
@@ -126,4 +131,6 @@ class VectorStore:
             if isinstance(result, Exception) or result.get("status") != "deleted":
                 errs.append(path)
 
-        return {"status": "deleted" if not errs else "partial", "errors": errs}
+        status = "deleted" if not errs else "partial"
+        logger.info("Vector deletion batch completed: user_id=%s, total=%s, failed=%s, status=%s", user_id, len(paths), len(errs), status)
+        return {"status": status, "errors": errs}

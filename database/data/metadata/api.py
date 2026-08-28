@@ -60,6 +60,7 @@ class SqliteStore:
                 );
                 """
             )
+            logger.info("Metadata schema initialized: database=%s", settings.db.metadata_store.db_file)
 
     # UTILS
     @classmethod
@@ -122,15 +123,17 @@ class SqliteStore:
     @classmethod
     async def create(cls, user_id: int, payload: DBPayload):
         try:
-            return await asyncio.to_thread(cls._create_sync, user_id, payload)
+            result = await asyncio.to_thread(cls._create_sync, user_id, payload)
+            logger.info("Metadata created: user_id=%s, record_id=%s, title=%s", user_id, result.get("id") if result else None, payload.metadata.title)
+            return result
         except sqlite3.OperationalError as e:
-            logger.error(f"Create failed: couldn't connect to the database: {e}")
+            logger.error("Metadata creation database error: user_id=%s", user_id, exc_info=True)
             raise
         except sqlite3.IntegrityError as e:
-            logger.error(f"Create failed: integrity error occurred: {e}")
+            logger.error("Metadata creation integrity error: user_id=%s", user_id, exc_info=True)
             raise
         except Exception as e:
-            logger.exception("Create failed")
+            logger.exception("Metadata creation failed: user_id=%s", user_id)
             raise
 
     # READ
@@ -146,12 +149,14 @@ class SqliteStore:
     async def read_metadata_by_id(cls, record_id: int) -> Optional[Dict[str, Any]]:
         """Возвращает одну запись по id или None, если не найдена."""
         try:
-            return await asyncio.to_thread(cls._read_metadata_by_id, record_id)
+            result = await asyncio.to_thread(cls._read_metadata_by_id, record_id)
+            logger.debug("Metadata lookup completed: record_id=%s, found=%s", record_id, result is not None)
+            return result
         except sqlite3.OperationalError as e:
-            logger.error(f"Read failed: couldn't connect to the database: {e}")
+            logger.error("Metadata lookup database error: record_id=%s", record_id, exc_info=True)
             raise
         except Exception as e:
-            logger.exception("Read failed")
+            logger.exception("Metadata lookup failed: record_id=%s", record_id)
             raise
 
     @classmethod
@@ -178,11 +183,12 @@ class SqliteStore:
     async def delete(cls, user_id: int, title: str, primary_category: str | None):
         try:
             await asyncio.to_thread(cls._delete, user_id, title, primary_category)
+            logger.info("Metadata deleted: user_id=%s, title=%s, category=%s", user_id, title, primary_category)
         except sqlite3.OperationalError as e:
-            logger.error(f"Delete failed: couldn't connect to the database: {e}")
+            logger.error("Metadata deletion database error: user_id=%s, title=%s", user_id, title, exc_info=True)
             raise
         except Exception as e:
-            logger.exception("Delete failed")
+            logger.exception("Metadata deletion failed: user_id=%s, title=%s", user_id, title)
             raise
 
 

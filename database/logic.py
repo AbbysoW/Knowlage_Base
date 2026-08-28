@@ -52,18 +52,22 @@ class Transaction:
         self._wal_path.unlink(missing_ok=True)
 
     async def run(self):
+        logger.info("Transaction started: tx_id=%s, steps=%s", self.tx_id, len(self.steps))
         await self._write_wal(status="pending")
         completed: list[Step] = []
         try:
             for step in self.steps:
+                logger.debug("Transaction step started: tx_id=%s, step=%s", self.tx_id, step.name)
                 step.result = await step.do()
                 step.done = True
                 completed.append(step)
                 await self._write_wal(status="pending")
+                logger.debug("Transaction step completed: tx_id=%s, step=%s", self.tx_id, step.name)
             self._clear_wal()
+            logger.info("Transaction committed: tx_id=%s", self.tx_id)
         except Exception as e:
-            logger.exception("Transaction failed")
             failed_name = self.steps[len(completed)].name
+            logger.exception("Transaction failed: tx_id=%s, failed_step=%s", self.tx_id, failed_name)
             await self._rollback(completed)
             self._clear_wal()
             raise TransactionError(failed_name, e) from e
@@ -75,7 +79,7 @@ class Transaction:
             except Exception as e:
                 # компенсация упала — это критично, логируем отдельно,
                 # это уже не авто-восстановимо, нужен alert/ручной разбор
-                logger.critical(f"Rollback failed for step '{step.name}'", exc_info=True)
+                logger.critical("Rollback failed: tx_id=%s, step=%s", self.tx_id, step.name, exc_info=True)
                 await self._write_wal(status=f"rollback_failed:{step.name}")
                 raise
 
@@ -93,8 +97,11 @@ class DBLogic:
 
     @classmethod
     async def write_to_db(cls, user_id: int, payload: DBPayload):
+        logger.debug("Database write waiting for user lock: user_id=%s", user_id)
         async with await cls._get_user_lock(user_id):
+            logger.debug("Database write lock acquired: user_id=%s", user_id)
             await cls._write_to_db(user_id, payload)
+        logger.info("Database write completed: user_id=%s", user_id)
 
     @staticmethod
     async def _write_to_db(user_id: int, payload: DBPayload):

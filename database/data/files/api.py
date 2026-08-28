@@ -52,18 +52,20 @@ class FileStore:
 
     @classmethod
     async def create(cls, user_id: int, payload: DBPayload):
+        filepath = cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)
         try:
             await asyncio.to_thread(cls._create_sync, user_id, payload)
+            logger.info("File created: user_id=%s, path=%s, bytes=%s", user_id, filepath, len(payload.md.encode("utf-8")))
 
-        except FileExistsError as e:
-            logger.error(f'File {cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)} already exists')
+        except FileExistsError:
+            logger.warning("File already exists: user_id=%s, path=%s", user_id, filepath)
             raise
 
-        except FileNotFoundError as e:
-            logger.error(f'File {cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)} was not created')
+        except FileNotFoundError:
+            logger.error("File path unavailable: user_id=%s, path=%s", user_id, filepath, exc_info=True)
             raise
-        except Exception as e:
-            logger.exception("Create failed")
+        except Exception:
+            logger.exception("File creation failed: user_id=%s, path=%s", user_id, filepath)
             raise
 
 
@@ -84,11 +86,13 @@ class FileStore:
 
     @classmethod
     async def delete(cls, user_id: int, file_name: str, primary_category: str | None):
+        filepath = cls._build_path(user_id, primary_category, file_name)
         try:
             await asyncio.to_thread(cls._delete_sync, user_id, file_name, primary_category)
-        except PermissionError as e:
-            logger.error(f"Delete failed: Permission denied for file {cls._build_path(user_id, primary_category, file_name)}")
+            logger.info("File deleted: user_id=%s, path=%s", user_id, filepath)
+        except PermissionError:
+            logger.error("File deletion denied: user_id=%s, path=%s", user_id, filepath, exc_info=True)
             raise
-        except Exception as e:
-            logger.exception("Delete failed")
+        except Exception:
+            logger.exception("File deletion failed: user_id=%s, path=%s", user_id, filepath)
             raise
