@@ -54,7 +54,6 @@ class FileStore:
     async def create(cls, user_id: int, payload: DBPayload):
         try:
             await asyncio.to_thread(cls._create_sync, user_id, payload)
-            logger.info("File stored: user_id=%s, title=%s", user_id, payload.metadata.title)
 
         except FileExistsError as e:
             logger.error(f'File {cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)} already exists')
@@ -87,7 +86,6 @@ class FileStore:
     async def delete(cls, user_id: int, file_name: str, primary_category: str | None):
         try:
             await asyncio.to_thread(cls._delete_sync, user_id, file_name, primary_category)
-            logger.info("File deleted: user_id=%s, file_name=%s, category=%s", user_id, file_name, primary_category)
         except PermissionError as e:
             logger.error(f"Delete failed: Permission denied for file {cls._build_path(user_id, primary_category, file_name)}")
             raise

@@ -1,6 +1,4 @@
 import os
-import logging
-import logging
 import textwrap
 from pathlib import Path
 
@@ -9,9 +7,6 @@ from datetime import datetime
 
 from kb_schemas import NoteDesigner, Fact, FurtherReadingItem, Relation, TranscriptionResult
 from modules.common.llm_client import LLMClient
-
-
-logger = logging.getLogger(__name__)
 
 
 class MdDesignerModel:
@@ -63,8 +58,7 @@ class MdDesignerModel:
             )
         
         except FileNotFoundError as e:
-                        logger.error("Note designer prompt unavailable: path=%s", Path("telegram_logic/modules/md_pipeline/designer/sys_prompt.txt"), exc_info=True)
-                        raise
+            print(f"File not found: {e}")
 
     @classmethod
     def process(cls, results: dict, raw_data: TranscriptionResult) -> NoteDesigner:
@@ -83,5 +77,4 @@ class MdDesignerModel:
             relations=relations)
         result = llm_result
 
-        logger.debug("Note metadata generated: source_type=%s, created_at=%s", source_type, created_at)
         return result

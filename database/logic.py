@@ -52,7 +52,6 @@ class Transaction:
         self._wal_path.unlink(missing_ok=True)
 
     async def run(self):
-        logger.info("Knowledge transaction started: tx_id=%s, steps=%s", self.tx_id, len(self.steps))
         await self._write_wal(status="pending")
         completed: list[Step] = []
         try:
@@ -62,7 +61,6 @@ class Transaction:
                 completed.append(step)
                 await self._write_wal(status="pending")
             self._clear_wal()
-            logger.info("Knowledge transaction completed: tx_id=%s, steps=%s", self.tx_id, len(completed))
         except Exception as e:
             logger.exception("Transaction failed")
             failed_name = self.steps[len(completed)].name
@@ -97,7 +95,6 @@ class DBLogic:
     async def write_to_db(cls, user_id: int, payload: DBPayload):
         async with await cls._get_user_lock(user_id):
             await cls._write_to_db(user_id, payload)
-        logger.info("Knowledge note committed: user_id=%s, title=%s", user_id, payload.metadata.title)
 
     @staticmethod
     async def _write_to_db(user_id: int, payload: DBPayload):

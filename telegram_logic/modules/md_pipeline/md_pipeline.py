@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
-    logger.info("Note enrichment pipeline started: user_id=%s, source_type=%s", user_id, data.source_type)
     targets = {
         "facts": FactsModel.process,
         "relations": RelationModel.process,
@@ -57,7 +56,6 @@ async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
         logger.error("MdDesignerModel.process вернул пустой результат")
         return None
 
-    logger.info("Note enrichment pipeline completed: user_id=%s", user_id)
     return md
 
 

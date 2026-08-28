@@ -48,7 +48,7 @@ class TaskQueue:
                 logger.error(
                     "TaskQueue.stop: worker %d завершился с ошибкой при остановке",
                     worker_id,
-                    exc_info=(type(result), result, result.__traceback__),
+                    exc_info=result,
                 )
 
         logger.info("TaskQueue: остановлено %d воркеров", len(self._workers))

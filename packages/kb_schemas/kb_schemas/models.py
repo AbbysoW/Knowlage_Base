@@ -17,6 +17,7 @@ class TranscriptionResult(BaseModel):
     source_type: str          # "voice" | "pdf" | "image" | "video" | "link" | "text"
     source_ref: str | None    # URL или content-hash из attachment_store
     duration_sec: float | None = None
+    timestamp: datetime | None
     confidence: float | None = None
 
 
@@ -32,7 +33,6 @@ class Fact(BaseModel):
 class Relation(BaseModel):
     target_note_path: str
     relation_type: str         # "extends" | "contradicts" | "example_of" | ...
-    confidence: float
 
 class FurtherReadingItem(BaseModel):
     title: str

@@ -9,5 +9,11 @@ __pycache__/
 .venv/
 venv/
 *.log
-data/
-database/data/
+
+database/data/files
+database/data/metadata
+database/data/vectors
+
+!database/data/files/*.py
+!database/data/metadata/*.py
+!database/data/vectors/*.py

@@ -11,5 +11,5 @@ from .models import Formatter, NoteDesigner
 from .models import Note
 
 # DB Data
-from .models import Chunk, DBPayload
+from .models import Chunk, DBPayload, Step
 from .models import LogConfig

@@ -24,7 +24,6 @@ class LLMClient:
                     base_url="https://api.deepseek.com",
                     api_key=settings.deepseek_api_key,
                 )
-                logger.info("LLM client initialized: provider=deepseek")
             return cls._client
 
     @classmethod
@@ -45,9 +44,9 @@ class LLMClient:
                 temperature=temperature,
             )
             return response.choices[0].message.content
-        except RateLimitError:
-            logger.warning("LLM rate limit reached; retrying request")
-        except APIConnectionError:
-            logger.error("LLM provider connection failed", exc_info=True)
-        except APITimeoutError:
-            logger.error("LLM provider request timed out", exc_info=True)
+        except RateLimitError as e:
+            logger.error(f"Rate limit exceeded: {e}")
+        except APIConnectionError as e:
+            logger.error(f"API connection error: {e}")
+        except APITimeoutError as e:
+            logger.error(f"API timeout error: {e}")

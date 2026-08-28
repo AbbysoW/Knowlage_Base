@@ -37,8 +37,6 @@ class Settings(BaseSettings):
     telegram_api_token: str
     deepseek_api_key: str
 
-    log: LogConfig = LogConfig()
-
     embedding_model: EmbeddingModelConfig = EmbeddingModelConfig()
     db: DBConfig = DBConfig()
 settings = Settings()

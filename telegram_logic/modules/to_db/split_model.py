@@ -1,14 +1,10 @@
 
-import logging
 from pathlib import Path
 
 from kb_schemas import Chunk, NoteDesigner
 
 from modules.common.embedding_client import EmbeddingModel
 from modules.common.llm_client import LLMClient
-
-
-logger = logging.getLogger(__name__)
 
 class Split:
 
@@ -37,8 +33,7 @@ class Split:
                 )
         
         except FileNotFoundError as e:
-            logger.error("Chunking prompt unavailable: path=%s", Path(__file__).parent / "sys_prompt.txt", exc_info=True)
-            raise
+            print(f"File not found: {e}")
 
     @classmethod
     def split_to_chunks(cls, data: NoteDesigner) -> list[Chunk]:
@@ -50,5 +45,4 @@ class Split:
             embedding=EmbeddingModel.get_embedding(chunk),
         ) for chunk in chunks_str]
 
-        logger.debug("Note content split into chunks: count=%s", len(chunks))
         return chunks

@@ -65,6 +65,11 @@ async def process_data(user_id: int, data: str, data_type: str, date: datetime):
         # send user error message
         pass
     except Exception:
+        logger.error(
+            "process_data: непредвиденная ошибка обработки (user_id=%s, data_type=%s)",
+            user_id, data_type,
+            exc_info=True,
+        )
         raise
 
 

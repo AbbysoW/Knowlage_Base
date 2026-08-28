@@ -1,16 +1,12 @@
 
 import os
 import threading
-import logging
 from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 import torch
 
 from config import settings
-
-
-logger = logging.getLogger(__name__)
 
 
 class EmbeddingModel:
@@ -23,7 +19,6 @@ class EmbeddingModel:
             if cls._model is None:
                 cls._model = SentenceTransformer(settings.embedding_model.name)
                 cls._model.eval()
-                logger.info("Embedding model initialized: model=%s", settings.embedding_model.name)
             return cls._model
 
     @classmethod

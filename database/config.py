@@ -7,15 +7,15 @@ from kb_schemas import LogConfig
 from pathlib import Path
 
 class Transaction(BaseModel):
-    wal_dir: Path = Path("/var/data/wal")
+    wal_dir: Path = Path("var/data/wal")
 
 class FileStore(BaseModel):
     name: str = 'file_store'
-    path: Path = Path("/data/files")
+    path: Path = Path("data/files")
 
 class MetadataStore(BaseModel):
     name: str = 'metadata_store'
-    path: Path = Path("/data/metadata")
+    path: Path = Path("data/metadata")
 
     @property
     def db_file(self) -> Path:
@@ -23,7 +23,7 @@ class MetadataStore(BaseModel):
 
 class VectorStore(BaseModel):
     name: str = 'vector_store'
-    path: Path = Path("/data/vectors")
+    path: Path = Path("data/vectors")
 
 class DB(BaseModel):
     file_store: FileStore = FileStore()

@@ -70,8 +70,7 @@ class RelationModel:
             ).relations
 
         except FileNotFoundError as e:
-            logger.error("Relations prompt unavailable: path=%s", Path(__file__).parent / "sys_prompt.txt", exc_info=True)
-            raise
+            logger.error(f"File not found: {e}")
 
 
     @staticmethod

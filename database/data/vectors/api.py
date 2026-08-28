@@ -56,7 +56,6 @@ class VectorStore:
     async def create(cls, user_id: int, chunks: list[Chunk], metadata: Formatter = None):
         try:
             if await asyncio.to_thread(cls._create, user_id, chunks, metadata):
-                logger.info("Vectors stored: user_id=%s, chunks=%s", user_id, len(chunks))
                 return {"status": "created"}
             return {"status": "failed"}
         except ConnectionRefusedError as e:
@@ -81,25 +80,13 @@ class VectorStore:
             ids = results["ids"][0]
             documents = results["documents"][0]
             metadatas = results["metadatas"][0]
-            response = {
-                "status": "read",
-                "results": [
-                    {
-                        "id": article_id,
-                        "content": content,
-                        "title": metadata.get("title"),
-                        "path": metadata.get("path"),
-                    }
-                    for article_id, content, metadata in zip(ids, documents, metadatas)
-                ],
-            }
-            logger.debug(
-                "Nearest vectors queried: user_id=%s, limit=%s, matches=%s",
-                user_id,
-                limit,
-                len(response["results"]),
-            )
-            return response
+            return {"status": "read",
+                    "results": [{
+                        'id': article_id,
+                        'content': content,
+                        'title': metadata.get('title'),
+                        'path': metadata.get('path')
+                    } for article_id, content, metadata in zip(ids, documents, metadatas)]}
 
         except ConnectionRefusedError as e:
             logger.error(f"Read failed: Could not connect to vector store: {e}")
@@ -108,7 +95,7 @@ class VectorStore:
             logger.exception("Read failed")
             raise
 
-    # DELETE
+# DELETE
     @classmethod
     def _delete(cls, user_id: int, path: Path) -> bool:
         collection = cls._get_client().get_or_create_collection(name=str(user_id))
@@ -119,7 +106,6 @@ class VectorStore:
     async def delete(cls, user_id: int, path: Path) -> dict:
         try:
             ok = await asyncio.to_thread(cls._delete, user_id, path)
-            logger.info("Vectors deleted: user_id=%s, path=%s, status=%s", user_id, path, "deleted" if ok else "failed")
             return {"status": "deleted" if ok else "failed", "path": str(path)}
         except ConnectionRefusedError as e:
             logger.error(f"Delete failed: Could not connect to vector store: {e}")

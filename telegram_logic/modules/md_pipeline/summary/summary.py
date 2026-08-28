@@ -41,8 +41,7 @@ class SummaryModel:
                 )
         
         except FileNotFoundError as e:
-            logger.error("Summary prompt unavailable: path=%s", Path(__file__).parent / "sys_prompt.txt", exc_info=True)
-            raise
+            logger.error(f"File not found: {e}")
 
     @classmethod
     def process(cls, user_id: int, data: TranscriptionResult):

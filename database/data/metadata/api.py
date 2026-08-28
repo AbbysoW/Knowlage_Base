@@ -122,9 +122,7 @@ class SqliteStore:
     @classmethod
     async def create(cls, user_id: int, payload: DBPayload):
         try:
-            result = await asyncio.to_thread(cls._create_sync, user_id, payload)
-            logger.info("Metadata stored: user_id=%s, title=%s", user_id, payload.metadata.title)
-            return result
+            return await asyncio.to_thread(cls._create_sync, user_id, payload)
         except sqlite3.OperationalError as e:
             logger.error(f"Create failed: couldn't connect to the database: {e}")
             raise
@@ -180,7 +178,6 @@ class SqliteStore:
     async def delete(cls, user_id: int, title: str, primary_category: str | None):
         try:
             await asyncio.to_thread(cls._delete, user_id, title, primary_category)
-            logger.info("Metadata deleted: user_id=%s, title=%s, category=%s", user_id, title, primary_category)
         except sqlite3.OperationalError as e:
             logger.error(f"Delete failed: couldn't connect to the database: {e}")
             raise
