@@ -3,6 +3,7 @@ import textwrap
 from concurrent.futures import ProcessPoolExecutor
 import logging
 from pathlib import Path
+from time import monotonic
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -35,9 +36,7 @@ class RelationModel:
 
     @staticmethod
     async def _fetch_articles(user_id: int, raw_content: str):
-
-        await asyncio.wrap_future
-
+        started_at = monotonic()
         pool = ProcessPoolExecutor(max_workers=1)
         try:
             future = pool.submit(EmbeddingModel.get_embedding, raw_content)
@@ -48,6 +47,7 @@ class RelationModel:
         response = await get_neerest_articles(user_id, embedding)
         articles = response.get("articles", []) if response else []
 
+        logger.info("Related article search completed: user_id=%s, count=%s, duration_ms=%s", user_id, len(articles), round((monotonic() - started_at) * 1000))
         return articles
 
     @classmethod
@@ -69,8 +69,9 @@ class RelationModel:
                 temperature=0.1,
             ).relations
 
-        except FileNotFoundError as e:
-            logger.error(f"File not found: {e}")
+        except FileNotFoundError:
+            logger.exception("Relations prompt missing")
+            raise
 
 
     @staticmethod
@@ -101,4 +102,7 @@ class RelationModel:
         result = llm_result
 
         if result and isinstance(result, list):
+            logger.info("Relations extracted: user_id=%s, count=%s", user_id, len(result))
             return result
+        logger.warning("Relations extraction returned no items: user_id=%s", user_id)
+        return []

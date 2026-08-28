@@ -1,6 +1,7 @@
 import os
 import threading
 import logging
+from time import monotonic
 from typing import Any
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -33,6 +34,8 @@ class LLMClient:
         stop=stop_after_attempt(4),
     )
     def send_request(cls, system_prompt: str, user_content: str, output_format: Any | None = None, temperature: float = 0.5):
+        started_at = monotonic()
+        logger.debug("LLM request started: prompt_length=%s, input_length=%s, structured=%s, temperature=%s", len(system_prompt), len(user_content), output_format is not None, temperature)
         try:
             response = cls._get_client().chat.completions.parse(
                 model="deepseek-v4-flash",
@@ -43,10 +46,18 @@ class LLMClient:
                 response_format=output_format,
                 temperature=temperature,
             )
-            return response.choices[0].message.content
+            result = response.choices[0].message.content
+            logger.info("LLM request completed: output_length=%s, duration_ms=%s", len(result or ""), round((monotonic() - started_at) * 1000))
+            return result
         except RateLimitError as e:
-            logger.error(f"Rate limit exceeded: {e}")
+            logger.warning("LLM rate limit: error=%s", e)
+            raise
         except APIConnectionError as e:
-            logger.error(f"API connection error: {e}")
+            logger.error("LLM connection failed: error=%s", e, exc_info=True)
+            raise
         except APITimeoutError as e:
-            logger.error(f"API timeout error: {e}")
+            logger.error("LLM request timed out: error=%s", e, exc_info=True)
+            raise
+        except Exception:
+            logger.exception("LLM request failed: structured=%s", output_format is not None)
+            raise

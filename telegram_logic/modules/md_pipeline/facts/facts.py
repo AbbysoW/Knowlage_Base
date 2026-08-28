@@ -1,11 +1,15 @@
 import os
 import textwrap
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from kb_schemas import Fact, TranscriptionResult
 from modules.common.llm_client import LLMClient
+
+
+logger = logging.getLogger(__name__)
 
 
 class FactsModel:
@@ -39,8 +43,9 @@ class FactsModel:
                 temperature=0.0,
             ).facts
         
-        except FileNotFoundError as e:
-            print(f"File not found: {e}")
+        except FileNotFoundError:
+            logger.exception("Facts prompt missing")
+            raise
 
     @classmethod
     def process(cls, user_id: int, data: TranscriptionResult):
@@ -50,4 +55,7 @@ class FactsModel:
         result = llm_result
         
         if result:
+            logger.info("Facts extracted: user_id=%s, count=%s", user_id, len(result))
             return result
+        logger.warning("Facts extraction returned no items: user_id=%s", user_id)
+        return []

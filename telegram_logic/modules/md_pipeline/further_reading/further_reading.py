@@ -1,11 +1,15 @@
 import os
 import textwrap
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from kb_schemas import FurtherReadingItem, TranscriptionResult
 from modules.common.llm_client import LLMClient
+
+
+logger = logging.getLogger(__name__)
 
 
 class FurtherReadingModel:
@@ -39,8 +43,9 @@ class FurtherReadingModel:
                 temperature=0.4,
             ).further_reading
         
-        except FileNotFoundError as e:
-            print(f"File not found: {e}")
+        except FileNotFoundError:
+            logger.exception("Further reading prompt missing")
+            raise
 
     @classmethod
     def process(cls, user_id: int, data: TranscriptionResult):
@@ -50,4 +55,7 @@ class FurtherReadingModel:
         result = llm_result
 
         if result:
+            logger.info("Further reading extracted: user_id=%s, count=%s", user_id, len(result))
             return result
+        logger.warning("Further reading extraction returned no items: user_id=%s", user_id)
+        return []

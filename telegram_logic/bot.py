@@ -27,8 +27,10 @@ dp = Dispatcher()
 async def catch_message(message: Message):
     status = new_data(message.from_user.id, message.text, 'text', datetime.now().isoformat())
     if status:
+        logger.info("Message accepted: user_id=%s, data_type=text, text_length=%s", message.from_user.id, len(message.text))
         await message.reply("Text received!")
     else:
+        logger.warning("Message rejected: user_id=%s, data_type=text", message.from_user.id)
         await message.reply("Failed to receive the text.\nTry again later!")
 
 
@@ -62,10 +64,12 @@ async def catch_message(message: Message):
 # Start
 @dp.message(CommandStart())
 async def start(message: Message):
+    logger.info("User started bot: user_id=%s", message.from_user.id)
     await message.reply("Welcome to the bot!")
 
 
 async def run_bot():
+    logger.info("Telegram service starting: workers=%s", task_queue._worker_count)
     task_queue.start()
     try:
         await dp.start_polling(bot)
@@ -74,6 +78,7 @@ async def run_bot():
         await close_search_client()
         await close_db_client()
         await bot.session.close()
+        logger.info("Telegram service stopped")
 
 
 if __name__ == "__main__":

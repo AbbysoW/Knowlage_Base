@@ -47,7 +47,8 @@ async def transcribe(data: Any, data_type: str) -> TranscriptionResult:
 
 
 
-async def process_data(user_id: int, data: str, data_type: str, date: datetime):
+async def process_data(user_id: int, data: Any, data_type: str, date: datetime):
+    logger.info("Knowledge item processing started: user_id=%s, data_type=%s", user_id, data_type)
     try:
         transcribed = await transcribe(data, data_type)
         transcribed.timestamp = date
@@ -55,6 +56,7 @@ async def process_data(user_id: int, data: str, data_type: str, date: datetime):
         md: NoteDesigner = await prepare_md(user_id, transcribed)
 
         await ToDB.send_to_db(user_id, md, transcribed)
+        logger.info("Knowledge item persisted: user_id=%s, data_type=%s, title=%s", user_id, data_type, md.formatter.title)
 
     except ValueError:
         logger.error(
@@ -77,4 +79,6 @@ task_queue = TaskQueue(handler=process_data, worker_count=3, maxsize=200)
 
 
 def new_data(user_id: int, data: Any, data_type: str, date: datetime):
-    return task_queue.submit(user_id, data, data_type, date)
+    accepted = task_queue.submit(user_id, data, data_type, date)
+    logger.debug("Knowledge item queued: user_id=%s, data_type=%s, accepted=%s", user_id, data_type, accepted)
+    return accepted

@@ -1,6 +1,7 @@
 # telegram_logic/task_queue.py
 import asyncio
 import logging
+from time import monotonic
 from dataclasses import dataclass
 from datetime import datetime
 from pydantic import BaseModel
@@ -34,7 +35,7 @@ class TaskQueue:
             asyncio.create_task(self._worker_loop(i))
             for i in range(self._worker_count)
         ]
-        logger.info("TaskQueue: запущено %d воркеров", self._worker_count)
+        logger.info("TaskQueue started: workers=%s, capacity=%s", self._worker_count, self._queue.maxsize)
 
     async def stop(self):
         # дожидаемся обработки того, что уже в очереди, затем гасим воркеров
@@ -56,7 +57,10 @@ class TaskQueue:
 
     def submit(self, user_id: int, data: Any, data_type: str, date: datetime) -> bool:
         try:
-            self._queue.put_nowait(Job(user_id, data, data_type, date))
+            self._queue.put_nowait(
+                Job(user_id=user_id, data=data, data_type=data_type, date=date)
+            )
+            logger.debug("Task queued: user_id=%s, data_type=%s, queue_size=%s", user_id, data_type, self._queue.qsize())
             return True
         except asyncio.QueueFull:
             logger.warning(
@@ -77,8 +81,10 @@ class TaskQueue:
     async def _worker_loop(self, worker_id: int):
         while True:
             job = await self._queue.get()
+            started_at = monotonic()
             try:
                 await self._handler(job.user_id, job.data, job.data_type, job.date)
+                logger.info("Task completed: worker=%s, user_id=%s, data_type=%s, duration_ms=%s", worker_id, job.user_id, job.data_type, round((monotonic() - started_at) * 1000))
             except Exception:
                 logger.error(
                     "TaskQueue._worker_loop: worker %d, job для user=%s (data_type=%s) упал",

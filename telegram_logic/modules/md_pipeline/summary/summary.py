@@ -41,7 +41,8 @@ class SummaryModel:
                 )
         
         except FileNotFoundError as e:
-            logger.error(f"File not found: {e}")
+            logger.error("Summary prompt missing", exc_info=True)
+            raise
 
     @classmethod
     def process(cls, user_id: int, data: TranscriptionResult):
@@ -52,4 +53,7 @@ class SummaryModel:
         result = llm_result
     
         if result:
+            logger.info("Summary generated: user_id=%s, output_length=%s", user_id, len(result))
             return result
+        logger.warning("Summary generation returned empty result: user_id=%s", user_id)
+        return ""

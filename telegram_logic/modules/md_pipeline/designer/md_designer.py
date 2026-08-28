@@ -1,5 +1,6 @@
 import os
 import textwrap
+import logging
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -7,6 +8,9 @@ from datetime import datetime
 
 from kb_schemas import NoteDesigner, Fact, FurtherReadingItem, Relation, TranscriptionResult
 from modules.common.llm_client import LLMClient
+
+
+logger = logging.getLogger(__name__)
 
 
 class MdDesignerModel:
@@ -57,8 +61,9 @@ class MdDesignerModel:
                 output_format=cls.output_format
             )
         
-        except FileNotFoundError as e:
-            print(f"File not found: {e}")
+        except FileNotFoundError:
+            logger.exception("Note designer prompt missing")
+            raise
 
     @classmethod
     def process(cls, results: dict, raw_data: TranscriptionResult) -> NoteDesigner:
@@ -74,7 +79,10 @@ class MdDesignerModel:
             summary=summary, 
             facts=facts, 
             further_reading=further_reading, 
-            relations=relations)
+            relations=relations,
+            source_type=source_type,
+            created_at=created_at)
         result = llm_result
 
+        logger.info("Note designed: title=%s, category=%s", result.formatter.title, result.formatter.primary_category)
         return result

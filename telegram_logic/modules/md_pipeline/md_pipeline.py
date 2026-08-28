@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from time import monotonic
 
 from .facts import FactsModel
 from .relations import RelationModel
@@ -14,6 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
+    started_at = monotonic()
+    logger.info("Markdown pipeline started: user_id=%s, source_type=%s, text_length=%s", user_id, data.source_type, len(data.text))
     targets = {
         "facts": FactsModel.process,
         "relations": RelationModel.process,
@@ -33,29 +36,32 @@ async def prepare_md(user_id: int, data: TranscriptionResult) -> NoteDesigner:
         for name, fut in futures.items():
             try:
                 await fut
+                logger.debug("Markdown stage completed: user_id=%s, stage=%s", user_id, name)
             except Exception as e:
-                logger.exception("Поток '%s' упал", name)
+                logger.exception("Markdown stage failed: user_id=%s, stage=%s", user_id, name)
                 errors[name] = e
     results: dict = {name: fut.result() for name, fut in futures.items() if not fut.exception()}
 
     if errors:
         name, exc = next(iter(errors.items()))
+        logger.error("Markdown pipeline aborted: user_id=%s, failed_stage=%s", user_id, name)
         raise RuntimeError(f"Поток '{name}' завершился с ошибкой") from exc
 
     if len(results) != len(targets):
-        logger.error("Не все потоки вернули результат: %d из %d", len(results), len(targets))
+        logger.error("Markdown pipeline incomplete: user_id=%s, completed_stages=%s, expected_stages=%s", user_id, len(results), len(targets))
         return None
 
     try:
         md = await loop.run_in_executor(None, MdDesignerModel.process, results, data)
     except Exception:
-        logger.exception("MdDesignerModel.process упал с ошибкой")
+        logger.exception("Note design failed: user_id=%s", user_id)
         raise
 
     if not md:
-        logger.error("MdDesignerModel.process вернул пустой результат")
+        logger.error("Note design returned empty result: user_id=%s", user_id)
         return None
 
+    logger.info("Markdown pipeline completed: user_id=%s, duration_ms=%s", user_id, round((monotonic() - started_at) * 1000))
     return md
 
 
