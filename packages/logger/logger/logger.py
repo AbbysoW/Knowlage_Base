@@ -4,17 +4,18 @@ from datetime import datetime
 from pathlib import Path
 
 
-def setup_logging(file_level:str = "DEBUG", stream_level:str = "INFO"):
-    log_dir = Path('logger/logs')
+def setup_logging(
+    service: str | None = None,
+    format: str = '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
+        file_level: str = "DEBUG", stream_level: str = "INFO"):
+    log_dir = Path('logs') / service
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    formatter = logging.Formatter(
-        '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s'
-    )
+    formatter = logging.Formatter(format)
 
     # file handler (debug)
     file_handler = logging.FileHandler(
-        filename=log_dir / f'{datetime.now():%Y-%m-%d_%H-%M-%S}.log',
+        filename=log_dir / f'{datetime.now():%Y-%m-%d_%H-%M-%S}.log' if service else f'{datetime.now():%Y-%m-%d_%H-%M-%S}.log',
         mode='a',
         encoding='utf-8'
     )
@@ -44,8 +45,11 @@ if __name__ == '__main__':
     logger.critical('test critical log')
 
 
-def setup_uvicorn_logging():
-    log_dir = Path('logger/logs')
+def setup_uvicorn_logging(
+        service: str | None = None,
+    format: str = '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
+        file_level: str = "DEBUG", stream_level: str = "INFO"):
+    log_dir = Path('logs') / service
     log_dir.mkdir(parents=True, exist_ok=True)
 
     log_config = {
@@ -53,21 +57,21 @@ def setup_uvicorn_logging():
         "disable_existing_loggers": False,
         "formatters": {
             "default": {
-                "format": "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s",
+                "format": format,
             },
         },
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
                 "formatter": "default",
-                "level": "INFO",
+                "level": stream_level,
             },
             "file": {
                 "class": "logging.FileHandler",
                 "formatter": "default",
-                "filename": log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log",
+                "filename": log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log" if service else f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log",
                 "mode": "a",
-                "level": "DEBUG",
+                "level": file_level,
             },
         },
         "loggers": {

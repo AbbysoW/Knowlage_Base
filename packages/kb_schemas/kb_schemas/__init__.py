@@ -12,4 +12,3 @@ from .models import Note
 
 # DB Data
 from .models import Chunk, DBPayload, Step
-from .models import LogConfig

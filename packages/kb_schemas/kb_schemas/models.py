@@ -7,17 +7,12 @@ from typing import Any, Callable, Awaitable
 from pathlib import Path
 
 
-class LogConfig(BaseModel):
-    level: str = "INFO"
-    format: str = "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s"
-
-
 class TranscriptionResult(BaseModel):
     text: str
     source_type: str          # "voice" | "pdf" | "image" | "video" | "link" | "text"
-    source_ref: str | None    # URL или content-hash из attachment_store
+    source_ref: str | None = None   # URL или content-hash из attachment_store
     duration_sec: float | None = None
-    timestamp: datetime | None
+    timestamp: datetime | None = None
     confidence: float | None = None
 
 
@@ -59,13 +54,19 @@ class Formatter(BaseModel):
         return self
 
     def tags_to_str(self):
-        return '\n' + '\n'.join([f"- {tag}" for tag in self.tags])
+        if not self.tags:
+            return "  []"
+        return '\n' + '\n'.join([f"  - {tag}" for tag in self.tags])
 
     def entities_to_str(self):
-        return '\n' + '\n'.join([f"- {entity.name}" for entity in self.entities])
+        if not self.entities:
+            return "  []"
+        return '\n' + '\n'.join([f"  - {entity.name}" for entity in self.entities])
 
     def relations_to_str(self):
-        return '\n' + '\n'.join([f"- {relation.target_note_path}" for relation in self.relations])
+        if not self.relations:
+            return "  []"
+        return '\n' + '\n'.join([f"  - {relation.target_note_path}" for relation in self.relations])
 
 class NoteDesigner(BaseModel):
     formatter: Formatter
