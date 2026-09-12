@@ -6,12 +6,14 @@ import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import asynccontextmanager
 from pydantic import BaseModel
+from logger import setup_uvicorn_logging
 
 from kb_schemas import DBPayload
 from logic import DBLogic
 from config import settings
 
 
+setup_uvicorn_logging(service="database", format=settings.log.format, stream_level=settings.log.level)
 logger = logging.getLogger(__name__)
 
 

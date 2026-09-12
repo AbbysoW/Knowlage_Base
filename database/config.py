@@ -2,9 +2,13 @@
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from kb_schemas import LogConfig
 
 from pathlib import Path
+
+
+class LogConfig(BaseModel):
+    level: str = "DEBUG"
+    format: str = "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s"
 
 class Transaction(BaseModel):
     wal_dir: Path = Path("var/data/wal")

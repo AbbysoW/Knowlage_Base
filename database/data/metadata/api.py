@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import asyncio
 import sqlite3
 import json
@@ -67,7 +61,12 @@ class SqliteStore:
     def _serialize_list(cls, value: Optional[List[Any]]) -> Optional[str]:
         if value is None:
             return None
-        return json.dumps(value, ensure_ascii=False)
+        # поддержка как строк, так и pydantic-моделей (Entity)
+        serializable = [
+            item.model_dump() if hasattr(item, "model_dump") else item
+            for item in value
+        ]
+        return json.dumps(serializable, ensure_ascii=False)
     
     @classmethod
     def _deserialize_list(cls, value: Optional[str]) -> List[Any]:
@@ -118,7 +117,7 @@ class SqliteStore:
                 )
             )
             new_id = cursor.lastrowid
-        return cls.read_metadata_by_id(new_id)
+        return cls._read_metadata_by_id(new_id)
     
     @classmethod
     async def create(cls, user_id: int, payload: DBPayload):

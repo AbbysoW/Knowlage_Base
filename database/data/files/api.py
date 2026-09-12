@@ -8,6 +8,7 @@ import asyncio
 import textwrap
 from pathlib import Path
 import logging
+from typing import Optional
 
 from kb_schemas import DBPayload
 from config import settings
@@ -27,6 +28,37 @@ class FileStore:
             / file_name
         )
 
+    @staticmethod
+    def _format_yaml(payload: DBPayload) -> Optional[str]:
+        template = textwrap.dedent(f"""\
+            ---
+            title: "%s"
+            created: %s
+            source_type: %s
+            tags:
+            %s
+            entities:
+            %s
+            related_articles:
+            %s
+            ---
+
+            %s
+
+            %s
+        """)
+
+        content = template % (
+            payload.metadata.title,
+            payload.metadata.created_at,
+            payload.raw_data.source_type,
+            payload.metadata.tags_to_str(),
+            payload.metadata.entities_to_str(),
+            payload.metadata.relations_to_str(),
+            f"# {payload.metadata.title}" if not payload.md.startswith(f'# {payload.metadata.title}') else '',
+            payload.md,
+        )
+        return content
 
     # CREATE
     @classmethod
@@ -34,18 +66,7 @@ class FileStore:
         filepath: Path = cls._build_path(user_id, payload.metadata.primary_category, payload.metadata.file_name)
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        content = textwrap.dedent(f'''\
-            ---
-            title: {payload.metadata.title}
-            created: {payload.metadata.created_at}
-            source_type: {payload.raw_data.source_type}
-            tags: {payload.metadata.tags_to_str()}
-            entities: {payload.metadata.entities_to_str()}
-            related_articles: {payload.metadata.relations_to_str()}
-            ---
-            # {payload.metadata.title}
-            {payload.md}
-        ''')
+        content = cls._format_yaml(payload)
 
         with filepath.open("x", encoding="utf-8") as f:
             f.write(content)
