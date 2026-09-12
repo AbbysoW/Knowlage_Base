@@ -226,12 +226,12 @@ database/data/files/*
 !database/data/files/logic.py
 !database/data/files/api.py
 
-database/metadata/files/*
-!database/metadata/files/__init__.py
-!database/metadata/files/logic.py
-!database/metadata/files/api.py
+database/data/metadata/*
+!database/data/metadata/__init__.py
+!database/data/metadata/logic.py
+!database/data/metadata/api.py
 
-database/vectors/files/*
-!database/vectors/files/__init__.py
-!database/vectors/files/logic.py
-!database/vectors/files/api.py
+database/data/vectors/*
+!database/data/vectors/__init__.py
+!database/data/vectors/logic.py
+!database/data/vectors/api.py
