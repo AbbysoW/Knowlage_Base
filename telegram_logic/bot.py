@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
+from logger import setup_logging
 
 from router import new_data, task_queue
 from modules.md_pipeline.relations.db_search_client import close_http_client as close_search_client
@@ -15,6 +16,7 @@ from config import settings
 
 
 load_dotenv()
+setup_logging(service="telegram", format=settings.log.format, stream_level=settings.log.level)
 logger = logging.getLogger(__name__)
 
 

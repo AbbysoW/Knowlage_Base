@@ -31,7 +31,7 @@ class FurtherReadingModel:
         raw_content - сырой текст мыслей
         '''
         try:
-            with open(Path("telegram_logic/modules/md_pipeline/further_reading/sys_prompt.txt"), "r") as f:
+            with open(Path(__file__).parent / "sys_prompt.txt", "r") as f:
                 system_prompt = f.read()
         
             user_content = cls.user_content % raw_content

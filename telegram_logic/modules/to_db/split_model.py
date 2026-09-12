@@ -3,6 +3,7 @@ from pathlib import Path
 import logging
 
 from kb_schemas import Chunk, NoteDesigner
+from pydantic import BaseModel
 
 from modules.common.embedding_client import EmbeddingModel
 from modules.common.llm_client import LLMClient
@@ -16,37 +17,40 @@ class Split:
         Основной документ:
         %s
     '''
-    output_format = list[str]
+    class OutputFormat(BaseModel):
+            chunks: list[str]
+
+    output_format = OutputFormat
 
     @classmethod
-    def send_request(cls, raw_content: str) -> list[str]:
+    def send_request(cls, content: str) -> list[str]:
         '''
-        raw_content - сырой текст мыслей
+        content - MD файл
         articles_str - строка с рекомендуемыми статьями
         '''
         try:
             with open(Path(__file__).parent / "sys_prompt.txt", "r") as f:
                 system_prompt = f.read()
 
-                user_content = cls.user_content % (raw_content)
+                user_content = cls.user_content % (content)
 
             chunks = LLMClient.send_request(
-                system_prompt=system_prompt, 
-                user_content=user_content, 
+                system_prompt=system_prompt,
+                user_content=user_content,
                 output_format=cls.output_format
-                )
+                ).chunks
             logger.info("Note split completed: chunk_count=%s", len(chunks))
             return chunks
-        
+
         except FileNotFoundError:
             logger.exception("Chunk split prompt missing")
             raise
 
     @classmethod
     def split_to_chunks(cls, data: NoteDesigner) -> list[Chunk]:
-        raw_content = data.content
+        content = data.content
 
-        chunks_str = cls.send_request(raw_content)
+        chunks_str = cls.send_request(content)
         chunks = []
         for index, chunk in enumerate(chunks_str):
             try:

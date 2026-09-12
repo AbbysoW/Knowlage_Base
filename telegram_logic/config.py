@@ -2,11 +2,11 @@
 
 from pydantic import BaseModel, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from kb_schemas import LogConfig
 
 
-
-
+class LogConfig(BaseModel):
+    level: str = "DEBUG"
+    format: str = "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s"
 
 
 class EmbeddingModelConfig(BaseModel):
@@ -21,9 +21,7 @@ class DBConfig(BaseModel):
     @computed_field
     @property
     def full_url(self) -> str:
-        return f"{self.host}:{self.port}"
-
-
+        return f"http://{self.host}:{self.port}"
 
 
 class Settings(BaseSettings):
@@ -36,6 +34,8 @@ class Settings(BaseSettings):
     debug: bool = False
     telegram_api_token: str
     deepseek_api_key: str
+
+    log: LogConfig = LogConfig()
 
     embedding_model: EmbeddingModelConfig = EmbeddingModelConfig()
     db: DBConfig = DBConfig()
