@@ -1,55 +1,27 @@
+
 services:
 
   telegram_logic:
-    build:
-      context: .
-      dockerfile: telegram_logic/Dockerfile
-
-    container_name: telegram_logic
-
-    environment:
-      PYTHONDONTWRITEBYTECODE: "1"
-      DB__NAME: database
-      DB__HOST: database
-      DB__PORT: "5432"
-
-    env_file:
-      - .env
+    restart: "no"                  # в dev падение должно быть видно, а не уходить в рестарт-луп
+    stop_grace_period: 10s         # в dev не ждём дообработки очереди
 
     volumes:
       - ./telegram_logic:/app
-      - ./packages/kb_schemas:/packages/kb_schemas
-
-    depends_on:
-      database:
-        condition: service_healthy
- 
+      - ./packages/kb_schemas:/packages/kb_schemas   # editable-установка: правки подхватываются без пересборки
+      - ./packages/logger:/packages/logger
+      - ./telegram_logic/logs:/app/logs
 
   database:
-    build:
-      context: .
-      dockerfile: database/Dockerfile
+    restart: "no"
+    stop_grace_period: 10s
 
-    container_name: database
-
-    environment:
-     - PYTHONDONTWRITEBYTECODE=1
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "5432", "--reload"]
 
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
+
     volumes:
       - ./database:/app
       - ./packages/kb_schemas:/packages/kb_schemas
-
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5432/docs')"
-        ]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 15s
+      - ./packages/logger:/packages/logger
+      - ./database/logs:/app/logs

@@ -1,3 +1,4 @@
+
 services:
 
   telegram_logic:
@@ -6,28 +7,34 @@ services:
       dockerfile: telegram_logic/Dockerfile
 
     container_name: telegram_logic
+    restart: unless-stopped
+    # Очередь задач живёт в памяти, а TaskQueue.stop() ждёт queue.join().
+    # С дефолтными 10 с Docker пришлёт SIGKILL и принятые задачи потеряются.
+    stop_grace_period: 3m
 
+    # TELEGRAM_API_TOKEN, DEEPSEEK_API_KEY (файл .env лежит в корне репозитория)
+    env_file:
+      - telegram_logic/.env
+
+    # environment приоритетнее env_file и dotenv-файлов: адрес БД внутри сети compose
+    # не будет перебит значением DB__HOST=localhost из локального .env.
     environment:
       PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
       DB__NAME: database
       DB__HOST: database
       DB__PORT: "5432"
+      # Кэш модели эмбеддингов: не скачивать заново при пересоздании контейнера.
+      # (Для старых версий sentence-transformers может понадобиться SENTENCE_TRANSFORMERS_HOME — проверить.)
+      HF_HOME: /cache/huggingface
 
-    env_file:
-      - .env
-
-    # volumes:
-      # - logs
+    volumes:
+      - hf_cache:/cache/huggingface
+      - tg_logs:/app/logs          # setup_logging пишет в logs/ относительно WORKDIR
 
     depends_on:
       database:
         condition: service_healthy
- 
-  volumes:
-    db_files:
-    db_metadata:
-    db_vectors:
-    db_wal:
 
   database:
     build:
@@ -35,27 +42,45 @@ services:
       dockerfile: database/Dockerfile
 
     container_name: database
+    restart: unless-stopped
+    stop_grace_period: 30s         # дать доработать сага-транзакции
 
     environment:
-     - PYTHONDONTWRITEBYTECODE=1
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      DB__FILE_STORE__PATH: /data/files
+      DB__METADATA_STORE__PATH: /data/metadata
+      DB__VECTOR_STORE__PATH: /data/vectors
+      TX__WAL_DIR: /var/data/wal
 
-    ports:
-      - "5432:5432"
+    # Сервис без авторизации: наружу не публикуем, доступен только из сети compose.
+    expose:
+      - "5432"
+
     volumes:
       - db_files:/data/files
       - db_metadata:/data/metadata
       - db_vectors:/data/vectors
       - db_wal:/var/data/wal
+      - db_logs:/app/logs
 
     healthcheck:
+      # /docs есть у FastAPI по умолчанию; после появления /health (см. BACKLOG) заменить.
       test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5432/docs')"
-        ]
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5432/health')"
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 15s
+
+volumes:
+  db_files:
+  db_metadata:
+  db_vectors:
+  db_wal:
+  db_logs:
+  tg_logs:
+  hf_cache:

@@ -3,9 +3,6 @@ from datetime import datetime
 import logging
 from typing import Any, Callable
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-
 from kb_schemas import NoteDesigner, TranscriptionResult
 from modules.md_pipeline import prepare_md
 from modules.to_db import ToDB

@@ -1,4 +1,6 @@
 -e ../packages/kb_schemas
+-e ../packages/logger
+
 fastapi
 uvicorn
 pydantic

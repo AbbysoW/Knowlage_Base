@@ -1,4 +1,6 @@
 -e ../packages/kb_schemas
+-e ../packages/logger
+
 pydantic
 pydantic-settings
 aiogram
@@ -7,3 +9,4 @@ python-dotenv
 openai
 sentence-transformers
 torch
+tenacity

@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY packages/kb_schemas /packages/kb_schemas
+COPY packages/logger /packages/logger
 
 COPY telegram_logic/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
