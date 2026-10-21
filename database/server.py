@@ -13,7 +13,13 @@ from logic import DBLogic
 from config import settings
 
 
+class HealthcheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/health" not in record.getMessage()
+
+
 setup_uvicorn_logging(service="database", format=settings.log.format, stream_level=settings.log.level)
+logging.getLogger("uvicorn.access").addFilter(HealthcheckFilter()) 
 logger = logging.getLogger(__name__)
 
 
