@@ -45,6 +45,9 @@ services:
     restart: unless-stopped
     stop_grace_period: 30s         # дать доработать сага-транзакции
 
+    # Пути данных задаются абсолютными и вне /app: database/data/* — это python-пакеты,
+    # и том, смонтированный поверх них, при пересборке образа затирал бы свежий код
+    # старыми .py, скопированными в том при его создании.
     environment:
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"

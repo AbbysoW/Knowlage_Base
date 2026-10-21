@@ -76,3 +76,9 @@ async def get_neerest_articles(query: NeerestArticlesQuery):
     except Exception:
         logger.exception("Nearest article query failed: user_id=%s", query.user_id)
         raise HTTPException(status_code=500, detail="Failed to read nearest articles")
+
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
