@@ -28,11 +28,11 @@
 
 - [x] **`S`** `docker-compose.yml`: блок `volumes:` стоит с отступом внутри `services:` — вынести на верхний уровень, иначе compose невалиден.
 - [x] **`S`** Пути томов не совпадают с путями приложения: тома смонтированы в `/data/files`, `/data/metadata`, `/data/vectors`, `/var/data/wal`, а приложение пишет в относительные `data/...` и `var/data/wal` (то есть в `/app/...`) — данные пропадут при пересоздании контейнера. Задать абсолютные пути через env (`DB__FILE_STORE__PATH=/data/files` и т.д.) или смонтировать тома в `/app/data/P...`.
-- [ ] **`S`** Образы не собираются / падают на старте:
+- [x] **`S`** Образы не собираются / падают на старте:
   - `packages/logger` не копируется и не ставится ни в одном Dockerfile, но импортируется в `bot.py`, `commands.py`, `server.py`;
   - `tenacity` (`llm_client.py`) отсутствует в `requirements.txt`;
   - `apscheduler` и `sqlalchemy` (импорты в `router.py`) отсутствуют — добавить или удалить импорты.
-- [ ] **`S`** `setup_logging(service=None)` падает: `Path('logs') / service` выполняется до проверки `if service`. Заодно: логи пишутся внутрь контейнера без тома.
+- [x] **`S`** `setup_logging(service=None)` падает: `Path('logs') / service` выполняется до проверки `if service`. Заодно: логи пишутся внутрь контейнера без тома.
 - [ ] **`S`** Образ telegram_logic: CPU-сборка torch (`--extra-index-url https://download.pytorch.org/whl/cpu`); модель эмбеддингов скачивать при сборке или монтировать `HF_HOME` как том (иначе качается при каждом пересоздании контейнера).
 
 ### Обработка исключений

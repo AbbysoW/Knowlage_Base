@@ -5,17 +5,17 @@ from pathlib import Path
 
 
 def setup_logging(
-    service: str | None = None,
+    service: str | None = 'none_service',
     format: str = '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s',
         file_level: str = "DEBUG", stream_level: str = "INFO"):
-    log_dir = Path('logs') / service
+    log_dir = Path('logs') / (service or 'none_service')
     log_dir.mkdir(parents=True, exist_ok=True)
 
     formatter = logging.Formatter(format)
 
     # file handler (debug)
     file_handler = logging.FileHandler(
-        filename=log_dir / f'{datetime.now():%Y-%m-%d_%H-%M-%S}.log' if service else f'{datetime.now():%Y-%m-%d_%H-%M-%S}.log',
+        filename=log_dir / f'{datetime.now():%Y-%m-%d_%H-%M-%S}.log',
         mode='a',
         encoding='utf-8'
     )
