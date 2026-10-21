@@ -33,7 +33,7 @@
   - `tenacity` (`llm_client.py`) отсутствует в `requirements.txt`;
   - `apscheduler` и `sqlalchemy` (импорты в `router.py`) отсутствуют — добавить или удалить импорты.
 - [x] **`S`** `setup_logging(service=None)` падает: `Path('logs') / service` выполняется до проверки `if service`. Заодно: логи пишутся внутрь контейнера без тома.
-- [ ] **`S`** Образ telegram_logic: CPU-сборка torch (`--extra-index-url https://download.pytorch.org/whl/cpu`); модель эмбеддингов скачивать при сборке или монтировать `HF_HOME` как том (иначе качается при каждом пересоздании контейнера).
+- [x] **`S`** Образ telegram_logic: CPU-сборка torch (`--extra-index-url https://download.pytorch.org/whl/cpu`); модель эмбеддингов скачивать при сборке или монтировать `HF_HOME` как том (иначе качается при каждом пересоздании контейнера).
 
 ### Обработка исключений
 
